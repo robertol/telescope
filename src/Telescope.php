@@ -117,6 +117,13 @@ class Telescope
     public static $useDarkTheme = false;
 
     /**
+     * The CSP nonce to use for style and script tags.
+     *
+     * @var string
+     */
+    public static $nonceAttribute = '';
+
+    /**
      * Indicates if Telescope should record entries.
      *
      * @var bool
@@ -181,6 +188,8 @@ class Telescope
                 'horizon',
                 'horizon:work',
                 'horizon:supervisor',
+                'telescope:list',
+                'telescope:show',
             ], config('telescope.ignoreCommands', []), config('telescope.ignore_commands', []))
         );
     }
@@ -838,7 +847,7 @@ class Telescope
     /**
      * Get the CSS for the Telescope dashboard.
      *
-     * @return Illuminate\Contracts\Support\Htmlable
+     * @return \Illuminate\Contracts\Support\Htmlable
      */
     public static function css()
     {
@@ -865,9 +874,11 @@ class Telescope
             throw new RuntimeException('Unable to load the '.(static::$useDarkTheme ? 'dark' : 'light').' Telescope dashboard styles.');
         }
 
+        $nonceAttribute = static::$nonceAttribute;
+
         return new HtmlString(<<<HTML
-            <style>{$app}</style>
-            <style>{$styles}</style>
+            <style{$nonceAttribute}>{$app}</style>
+            <style{$nonceAttribute}>{$styles}</style>
         HTML);
     }
 
@@ -891,8 +902,12 @@ class Telescope
             throw new RuntimeException('Unable to load the Telescope dashboard JavaScript.');
         }
 
+        $js = str_replace(["\r\n", "\r"], "\n", $js);
+
+        $nonceAttribute = static::$nonceAttribute;
+
         return new HtmlString(<<<HTML
-            <script type="module">
+            <script type="module"{$nonceAttribute}>
                 window.Telescope = {$telescope};
                 {$js}
             </script>
@@ -975,5 +990,18 @@ class Telescope
             'timezone' => config('app.timezone'),
             'recording' => ! cache('telescope:pause-recording'),
         ];
+    }
+
+    /**
+     * Set the CSP nonce to use for style and script tags.
+     *
+     * @param  string  $nonce
+     * @return static
+     */
+    public static function cspNonce($nonce)
+    {
+        static::$nonceAttribute = ' nonce="'.htmlspecialchars($nonce, ENT_QUOTES, 'UTF-8').'"';
+
+        return new static;
     }
 }

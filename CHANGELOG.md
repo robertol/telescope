@@ -1,6 +1,46 @@
 # Release Notes
 
-## [Unreleased](https://github.com/laravel/telescope/compare/v5.20.0...5.x)
+## [Unreleased](https://github.com/laravel/telescope/compare/v5.23.0...5.x)
+
+## [v5.23.0](https://github.com/laravel/telescope/compare/v5.22.1...v5.23.0) - 2026-08-27
+
+* Escape CSP nonce attribute value by [@iliaal](https://github.com/iliaal) in https://github.com/laravel/telescope/pull/1756
+* Test improvements by [@crynobone](https://github.com/crynobone) in https://github.com/laravel/telescope/pull/1759
+* Supports Guzzle 8 by [@crynobone](https://github.com/crynobone) in https://github.com/laravel/telescope/pull/1760
+* Supports PHPStan 2 by [@crynobone](https://github.com/crynobone) in https://github.com/laravel/telescope/pull/1761
+* Fix Telescope::css() return type docblock by [@Maggomann](https://github.com/Maggomann) in https://github.com/laravel/telescope/pull/1762
+
+## [v5.22.1](https://github.com/laravel/telescope/compare/v5.22.0...v5.22.1) - 2026-08-05
+
+* Fix BatchWatcher::recordBatch docblock copied from JobWatcher by [@darkdi](https://github.com/darkdi) in https://github.com/laravel/telescope/pull/1753
+
+## [v5.22.0](https://github.com/laravel/telescope/compare/v5.21.0...v5.22.0) - 2026-07-29
+
+* Bump actions/checkout from 7.0.0 to 7.0.1 in the github-actions group by [@dependabot](https://github.com/dependabot)[bot] in https://github.com/laravel/telescope/pull/1747
+* Bump immutable from 5.1.5 to 5.1.9 by [@dependabot](https://github.com/dependabot)[bot] in https://github.com/laravel/telescope/pull/1748
+* Bump postcss from 8.5.4 to 8.5.23 by [@dependabot](https://github.com/dependabot)[bot] in https://github.com/laravel/telescope/pull/1749
+* [5.x] Add CSP nonce support by [@roger-hermasch](https://github.com/roger-hermasch) in https://github.com/laravel/telescope/pull/1752
+
+## [v5.21.0](https://github.com/laravel/telescope/compare/v5.20.0...v5.21.0) - 2026-07-20
+
+* Bump axios from 1.14.0 to 1.15.0 by [@dependabot](https://github.com/dependabot)[bot] in https://github.com/laravel/telescope/pull/1715
+* Bump follow-redirects from 1.15.11 to 1.16.0 by [@dependabot](https://github.com/dependabot)[bot] in https://github.com/laravel/telescope/pull/1716
+* Bump axios from 1.15.0 to 1.15.2 by [@dependabot](https://github.com/dependabot)[bot] in https://github.com/laravel/telescope/pull/1718
+* Pin GitHub Actions to commit SHAs and add Dependabot config by [@joetannenbaum](https://github.com/joetannenbaum) in https://github.com/laravel/telescope/pull/1720
+* Bump shivammathur/setup-php from 2.37.0 to 2.37.1 in the github-actions group by [@dependabot](https://github.com/dependabot)[bot] in https://github.com/laravel/telescope/pull/1725
+* Bump axios from 1.15.2 to 1.16.0 by [@dependabot](https://github.com/dependabot)[bot] in https://github.com/laravel/telescope/pull/1727
+* GitHub Actions hardening by [@nunomaduro](https://github.com/nunomaduro) in https://github.com/laravel/telescope/pull/1730
+* Bump actions/checkout from 6.0.2 to 6.0.3 in the github-actions group by [@dependabot](https://github.com/dependabot)[bot] in https://github.com/laravel/telescope/pull/1731
+* Pin pull requests and issues workflows to latest laravel/.github by [@nunomaduro](https://github.com/nunomaduro) in https://github.com/laravel/telescope/pull/1732
+* Add Dependabot cooldown of 5 days by [@nunomaduro](https://github.com/nunomaduro) in https://github.com/laravel/telescope/pull/1733
+* Enable Dependabot auto-merge by [@nunomaduro](https://github.com/nunomaduro) in https://github.com/laravel/telescope/pull/1734
+* Bump shivammathur/setup-php from 2.37.1 to 2.37.2 in the github-actions group by [@dependabot](https://github.com/dependabot)[bot] in https://github.com/laravel/telescope/pull/1737
+* Bump form-data from 4.0.5 to 4.0.6 by [@dependabot](https://github.com/dependabot)[bot] in https://github.com/laravel/telescope/pull/1739
+* [5.x] Clear stale exception and failed tag when a job is marked processed by [@EhabAmawi](https://github.com/EhabAmawi) in https://github.com/laravel/telescope/pull/1741
+* Bump actions/checkout from 6.0.3 to 7.0.0 in the github-actions group by [@dependabot](https://github.com/dependabot)[bot] in https://github.com/laravel/telescope/pull/1743
+* [5.x] Normalize dashboard JavaScript line endings by [@lazerg](https://github.com/lazerg) in https://github.com/laravel/telescope/pull/1744
+* [5.x] Order deletes when pruning and clearing to prevent deadlocks by [@lazerg](https://github.com/lazerg) in https://github.com/laravel/telescope/pull/1745
+* Bump axios from 1.16.0 to 1.18.0 by [@dependabot](https://github.com/dependabot)[bot] in https://github.com/laravel/telescope/pull/1746
 
 ## [v5.20.0](https://github.com/laravel/telescope/compare/v5.19.0...v5.20.0) - 2026-04-06
 

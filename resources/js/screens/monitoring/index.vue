@@ -14,6 +14,7 @@ export default {
             ready: false,
             newTag: '',
             newEndpoint: '',
+            requestController: new AbortController(),
         };
     },
 
@@ -23,15 +24,27 @@ export default {
     mounted(){
         document.title = "Monitoring - Telescope";
 
+        const {signal} = this.requestController;
+
         Promise.all([
-            axios.get(Telescope.basePath + '/telescope-api/monitored-tags'),
-            axios.get(Telescope.basePath + '/telescope-api/monitored-endpoints'),
+            axios.get(Telescope.basePath + '/telescope-api/monitored-tags', {signal}),
+            axios.get(Telescope.basePath + '/telescope-api/monitored-endpoints', {signal}),
         ]).then(([tagsResponse, endpointsResponse]) => {
+            if (signal.aborted) return;
+
             this.tags = tagsResponse.data.tags;
             this.endpoints = endpointsResponse.data.endpoints;
 
             this.ready = true;
         });
+    },
+
+
+    /**
+     * Clean after the component is destroyed.
+     */
+    destroyed() {
+        this.requestController.abort();
     },
 
 
