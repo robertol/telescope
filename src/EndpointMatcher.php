@@ -39,6 +39,10 @@ class EndpointMatcher
         $uri = '/'.ltrim($uri, '/');
         $pattern = '/'.ltrim($pattern, '/');
 
+        // RequestWatcher stores fullUrl (may include query string); patterns are paths.
+        $uri = Str::before($uri, '?') ?: '/';
+        $pattern = Str::before($pattern, '?') ?: '/';
+
         return Str::is($pattern, $uri);
     }
 

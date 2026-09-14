@@ -96,9 +96,7 @@ export default {
 
             this.tag = this.$route.query.tag || '';
 
-            if (!this.$route.query.endpoint) {
-                this.endpoint = '';
-            }
+            this.endpoint = this.$route.query.endpoint || '';
 
             this.ready = false;
 
@@ -119,11 +117,11 @@ export default {
             const {signal} = this.requestController;
 
             return axios.post(Telescope.basePath + '/telescope-api/' + this.resource +
-                    '?tag=' + this.tag +
-                    '&endpoint=' + this.endpoint +
+                    '?tag=' + encodeURIComponent(this.tag) +
+                    '&endpoint=' + encodeURIComponent(this.endpoint) +
                     '&before=' + this.lastEntryIndex +
                     '&take=' + this.entriesPerRequest +
-                    '&family_hash=' + this.familyHash,
+                    '&family_hash=' + encodeURIComponent(this.familyHash),
                     null, {signal}
             ).then(response => {
                 if (signal.aborted) return;
@@ -164,10 +162,10 @@ export default {
 
             this.newEntriesTimeout = setTimeout(() => {
                 axios.post(Telescope.basePath + '/telescope-api/' + this.resource +
-                        '?tag=' + this.tag +
-                        '&endpoint=' + this.endpoint +
+                        '?tag=' + encodeURIComponent(this.tag) +
+                        '&endpoint=' + encodeURIComponent(this.endpoint) +
                         '&take=1' +
-                        '&family_hash=' + this.familyHash,
+                        '&family_hash=' + encodeURIComponent(this.familyHash),
                         null, {signal}
                 ).then(response => {
                     if (!signal.aborted) {

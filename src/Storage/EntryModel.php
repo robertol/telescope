@@ -163,17 +163,44 @@ class EntryModel extends Model
                         }
 
                         if ($method && $method !== '*') {
-                            $query->where('content->method', $method);
+                            $this->whereContentAttribute($query, 'method', '=', $method);
                         }
 
                         $like = '%'.str_replace('*', '%', ltrim($path, '/')).'%';
-                        $query->where('content->uri', 'like', $like);
+                        $this->whereContentAttribute($query, 'uri', 'like', $like);
                     });
                 }
             });
         });
 
         return $this;
+    }
+
+    /**
+     * Constrain a JSON content attribute in a driver-safe way.
+     *
+     * Telescope stores `content` as longText; PostgreSQL rejects `text ->>` operators
+     * used by Eloquent's `content->key` syntax unless the column is cast to json/jsonb.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  string  $attribute
+     * @param  string  $operator
+     * @param  string  $value
+     * @return void
+     */
+    protected function whereContentAttribute($query, string $attribute, string $operator, string $value): void
+    {
+        if (! in_array($attribute, ['method', 'uri'], true)) {
+            throw new \InvalidArgumentException("Unsupported Telescope content attribute [{$attribute}].");
+        }
+
+        if ($query->getConnection()->getDriverName() === 'pgsql') {
+            $query->whereRaw("(content::jsonb)->>'{$attribute}' {$operator} ?", [$value]);
+
+            return;
+        }
+
+        $query->where("content->{$attribute}", $operator, $value);
     }
 
     /**
