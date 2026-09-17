@@ -21,6 +21,10 @@ return new class extends Migration
     {
         $schema = Schema::connection($this->getConnection());
 
+        if ($schema->hasTable('telescope_monitored_endpoints')) {
+            return;
+        }
+
         $schema->create('telescope_monitored_endpoints', function (Blueprint $table) {
             $table->string('endpoint')->primary();
         });

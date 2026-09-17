@@ -60,4 +60,15 @@ class MonitoredEndpointTest extends FeatureTestCase
             ->assertJsonPath('entries.0.id', $webhook->uuid)
             ->assertJsonCount(1, 'entries');
     }
+
+    public function test_it_loads_package_migrations_so_consumers_do_not_copy_schema()
+    {
+        $expected = realpath(dirname(__DIR__, 2).'/database/migrations');
+
+        $this->assertNotFalse($expected);
+        $this->assertContains(
+            $expected,
+            array_map('realpath', app('migrator')->paths())
+        );
+    }
 }

@@ -3,9 +3,11 @@
 namespace Laravel\Telescope\Storage;
 
 use DateTimeInterface;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Telescope\Contracts\ClearableRepository;
 use Laravel\Telescope\Contracts\EntriesRepository as Contract;
 use Laravel\Telescope\Contracts\PrunableRepository;
@@ -44,6 +46,13 @@ class DatabaseEntriesRepository implements Contract, ClearableRepository, Prunab
      * @var array|null
      */
     protected $monitoredEndpoints;
+
+    /**
+     * Indicates if the monitored endpoints table has been verified.
+     *
+     * @var bool
+     */
+    protected $monitoredEndpointsTableReady = false;
 
     /**
      * Create a new database repository.
@@ -411,6 +420,8 @@ class DatabaseEntriesRepository implements Contract, ClearableRepository, Prunab
      */
     public function monitoringEndpoints()
     {
+        $this->ensureMonitoredEndpointsTable();
+
         return $this->table('telescope_monitored_endpoints')->pluck('endpoint')->all();
     }
 
@@ -443,6 +454,8 @@ class DatabaseEntriesRepository implements Contract, ClearableRepository, Prunab
      */
     public function stopMonitoringEndpoints(array $endpoints)
     {
+        $this->ensureMonitoredEndpointsTable();
+
         $this->table('telescope_monitored_endpoints')->whereIn('endpoint', $endpoints)->delete();
     }
 
@@ -489,8 +502,10 @@ class DatabaseEntriesRepository implements Contract, ClearableRepository, Prunab
             $deleted = $this->table('telescope_monitoring')->orderBy('tag')->take($this->chunkSize)->delete();
         } while ($deleted !== 0);
 
+        $this->ensureMonitoredEndpointsTable();
+
         do {
-            $deleted = $this->table('telescope_monitored_endpoints')->take($this->chunkSize)->delete();
+            $deleted = $this->table('telescope_monitored_endpoints')->orderBy('endpoint')->take($this->chunkSize)->delete();
         } while ($deleted !== 0);
     }
 
@@ -503,6 +518,31 @@ class DatabaseEntriesRepository implements Contract, ClearableRepository, Prunab
     {
         $this->monitoredTags = null;
         $this->monitoredEndpoints = null;
+        $this->monitoredEndpointsTableReady = false;
+    }
+
+    /**
+     * Create the monitored endpoints table when it is missing.
+     *
+     * Older installs published Telescope migrations before this table existed.
+     *
+     * @return void
+     */
+    protected function ensureMonitoredEndpointsTable(): void
+    {
+        if ($this->monitoredEndpointsTableReady) {
+            return;
+        }
+
+        $schema = Schema::connection($this->connection);
+
+        if (! $schema->hasTable('telescope_monitored_endpoints')) {
+            $schema->create('telescope_monitored_endpoints', function (Blueprint $table) {
+                $table->string('endpoint')->primary();
+            });
+        }
+
+        $this->monitoredEndpointsTableReady = true;
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace Laravel\Telescope\Tests\Storage;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Laravel\Telescope\Database\Factories\EntryModelFactory;
 use Laravel\Telescope\EntryType;
@@ -119,5 +120,17 @@ class DatabaseEntriesRepositoryTest extends FeatureTestCase
                 'content' => false,
             ]);
         });
+    }
+
+    public function test_monitor_endpoints_creates_missing_table()
+    {
+        Schema::connection('testbench')->dropIfExists('telescope_monitored_endpoints');
+
+        $repository = new DatabaseEntriesRepository('testbench');
+
+        $repository->monitorEndpoints(['POST:/api/webhooks/*']);
+
+        $this->assertTrue(Schema::connection('testbench')->hasTable('telescope_monitored_endpoints'));
+        $this->assertSame(['POST:/api/webhooks/*'], $repository->monitoringEndpoints());
     }
 }
