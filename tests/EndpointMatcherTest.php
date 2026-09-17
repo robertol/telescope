@@ -32,4 +32,13 @@ class EndpointMatcherTest extends TestCase
         $this->assertTrue(EndpointMatcher::matches('/v1/admin/notifications?per_page=8', 'GET', '/v1/admin/notifications'));
         $this->assertFalse(EndpointMatcher::matches('/v1/admin/notifications?per_page=8', 'GET', 'GET:/v1/admin/other'));
     }
+
+    public function test_it_matches_leading_wildcard_without_requiring_a_prefix_segment()
+    {
+        $this->assertTrue(EndpointMatcher::matches('/api/webhooks/foo', 'POST', '*/api/webhooks/*'));
+        $this->assertTrue(EndpointMatcher::matches('/v1/api/webhooks/x', 'POST', '*/api/webhooks/*'));
+        $this->assertFalse(EndpointMatcher::matches('/api/other', 'POST', '*/api/webhooks/*'));
+        $this->assertTrue(EndpointMatcher::matches('/api/webhooks/foo', 'GET', 'api/webhooks/*'));
+        $this->assertTrue(EndpointMatcher::matches('/api/webhooks/foo', 'GET', 'GET:/api/webhooks/*'));
+    }
 }

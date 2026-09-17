@@ -9,6 +9,7 @@ import moment from 'moment-timezone';
 import popper from 'popper.js';
 import relatedEntries from './components/RelatedEntries.vue';
 import indexScreen from './components/IndexScreen.vue';
+import monitoredRequests from './components/MonitoredRequests.vue';
 import previewScreen from './components/PreviewScreen.vue';
 import alert from './components/Alert.vue';
 import copyClipboard from './components/CopyClipboard.vue';
@@ -47,6 +48,7 @@ const router = new VueRouter({
 Vue.component('vue-json-pretty', VueJsonPretty);
 Vue.component('related-entries', relatedEntries);
 Vue.component('index-screen', indexScreen);
+Vue.component('monitored-requests', monitoredRequests);
 Vue.component('preview-screen', previewScreen);
 Vue.component('alert', alert);
 Vue.component('copy-clipboard', copyClipboard);

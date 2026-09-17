@@ -9,7 +9,10 @@ export default {
 </script>
 
 <template>
-    <index-screen title="Requests" resource="requests">
+    <div>
+        <monitored-requests></monitored-requests>
+
+        <index-screen title="Requests" resource="requests" endpoint-override="">
         <tr slot="table-header">
             <th scope="col">Verb</th>
             <th scope="col">Path</th>
@@ -67,5 +70,6 @@ export default {
                 </router-link>
             </td>
         </template>
-    </index-screen>
+        </index-screen>
+    </div>
 </template>

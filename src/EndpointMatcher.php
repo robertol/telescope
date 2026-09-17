@@ -37,7 +37,13 @@ class EndpointMatcher
         }
 
         $uri = '/'.ltrim($uri, '/');
-        $pattern = '/'.ltrim($pattern, '/');
+
+        // A leading "*" is a wildcard prefix. Prefixing "/" would turn
+        // "*/api/webhooks/*" into "/*/api/webhooks/*", which requires a
+        // path segment before /api and fails to match /api/webhooks/foo.
+        if (! str_starts_with($pattern, '*')) {
+            $pattern = '/'.ltrim($pattern, '/');
+        }
 
         // RequestWatcher stores fullUrl (may include query string); patterns are paths.
         $uri = Str::before($uri, '?') ?: '/';

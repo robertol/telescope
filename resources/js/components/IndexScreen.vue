@@ -4,9 +4,7 @@ import _ from 'lodash';
 import axios from 'axios';
 
 export default {
-    props: [
-        'resource', 'title', 'showAllFamily', 'hideSearch'
-    ],
+    props: ['resource', 'title', 'showAllFamily', 'hideSearch', 'endpointOverride'],
 
 
     /**
@@ -49,7 +47,10 @@ export default {
 
         this.tag = this.$route.query.tag || '';
 
-        this.endpoint = this.$route.query.endpoint || '';
+        this.endpoint =
+            this.endpointOverride !== undefined && this.endpointOverride !== null
+                ? this.endpointOverride
+                : this.$route.query.endpoint || '';
 
         this.loadEntries((entries) => {
             this.entries = entries;
@@ -96,7 +97,10 @@ export default {
 
             this.tag = this.$route.query.tag || '';
 
-            this.endpoint = this.$route.query.endpoint || '';
+            this.endpoint =
+                this.endpointOverride !== undefined && this.endpointOverride !== null
+                    ? this.endpointOverride
+                    : this.$route.query.endpoint || '';
 
             this.ready = false;
 
