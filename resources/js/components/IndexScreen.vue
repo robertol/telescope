@@ -19,12 +19,15 @@ export default {
             ready: false,
             requestController: new AbortController(),
             recordingStatus: 'enabled',
-            lastEntryIndex: '',
+            pageBefore: '',
+            nextBefore: '',
+            pageCursors: [''],
+            currentPage: 0,
             hasMoreEntries: true,
             hasNewEntries: false,
-            entriesPerRequest: 50,
+            entriesPerRequest: 25,
             loadingNewEntries: false,
-            loadingMoreEntries: false,
+            loadingPage: false,
 
             updateTimeAgoTimeout: null,
 
@@ -89,9 +92,8 @@ export default {
             clearTimeout(this.updateEntriesTimeout);
 
             this.hasNewEntries = false;
-            this.lastEntryIndex = '';
             this.loadingNewEntries = false;
-            this.loadingMoreEntries = false;
+            this.resetPagination();
 
             this.familyHash = this.$route.query.family_hash || '';
 
@@ -123,14 +125,14 @@ export default {
             return axios.post(Telescope.basePath + '/telescope-api/' + this.resource +
                     '?tag=' + encodeURIComponent(this.tag) +
                     '&endpoint=' + encodeURIComponent(this.endpoint) +
-                    '&before=' + this.lastEntryIndex +
+                    '&before=' + this.pageBefore +
                     '&take=' + this.entriesPerRequest +
                     '&family_hash=' + encodeURIComponent(this.familyHash),
                     null, {signal}
             ).then(response => {
                 if (signal.aborted) return;
 
-                this.lastEntryIndex = response.data.entries.length ? _.last(response.data.entries).sequence : this.lastEntryIndex;
+                this.nextBefore = response.data.entries.length ? _.last(response.data.entries).sequence : '';
 
                 this.hasMoreEntries = response.data.entries.length >= this.entriesPerRequest;
 
@@ -146,7 +148,7 @@ export default {
 
                 this.ready = true;
                 this.loadingNewEntries = false;
-                this.loadingMoreEntries = false;
+                this.loadingPage = false;
 
                 if (!this.mayRetry(error, signal)) return;
 
@@ -160,6 +162,10 @@ export default {
          * Keep checking if there are new entries.
          */
         checkForNewEntries(){
+            if (this.currentPage !== 0) {
+                return;
+            }
+
             const {signal} = this.requestController;
 
             clearTimeout(this.newEntriesTimeout);
@@ -214,7 +220,6 @@ export default {
         search(){
             this.debouncer(() => {
                 this.hasNewEntries = false;
-                this.lastEntryIndex = '';
 
                 this.$router.push({query: _.assign({}, this.$route.query, {tag: this.tag})}).catch(() => {});
             });
@@ -222,16 +227,66 @@ export default {
 
 
         /**
-         * Load more entries.
+         * Volta a lista para a primeira página de 25 registros.
          */
-        loadOlderEntries(){
-            this.loadingMoreEntries = true;
+        resetPagination(){
+            this.currentPage = 0;
+            this.pageBefore = '';
+            this.nextBefore = '';
+            this.pageCursors = [''];
+            this.hasMoreEntries = true;
+            this.loadingPage = false;
+        },
+
+
+        /**
+         * Substitui a página atual, sem acumular registros.
+         */
+        fetchCurrentPage(fromPrevious){
+            this.loadingPage = true;
 
             this.loadEntries((entries) => {
-                this.entries.push(...entries);
+                this.entries = entries;
+                this.loadingPage = false;
 
-                this.loadingMoreEntries = false;
+                if (fromPrevious) {
+                    this.hasMoreEntries = true;
+                }
+
+                if (this.currentPage === 0) {
+                    this.checkForNewEntries();
+                }
             });
+        },
+
+
+        /**
+         * Página seguinte, usando o sequence do último item como cursor.
+         */
+        goToNextPage(){
+            if (this.loadingPage || !this.hasMoreEntries || this.nextBefore === '') {
+                return;
+            }
+
+            clearTimeout(this.newEntriesTimeout);
+            this.pageCursors.splice(this.currentPage + 1, this.pageCursors.length, this.nextBefore);
+            this.currentPage += 1;
+            this.pageBefore = this.nextBefore;
+            this.fetchCurrentPage(false);
+        },
+
+
+        /**
+         * Página anterior, reusando o cursor já visitado.
+         */
+        goToPreviousPage(){
+            if (this.loadingPage || this.currentPage === 0) {
+                return;
+            }
+
+            this.currentPage -= 1;
+            this.pageBefore = this.pageCursors[this.currentPage];
+            this.fetchCurrentPage(true);
         },
 
 
@@ -239,9 +294,8 @@ export default {
          * Load new entries.
          */
         loadNewEntries(){
-            this.hasMoreEntries = true;
             this.hasNewEntries = false;
-            this.lastEntryIndex = '';
+            this.resetPagination();
             this.loadingNewEntries = true;
 
             clearTimeout(this.newEntriesTimeout);
@@ -405,19 +459,24 @@ export default {
                 <tr v-for="entry in entries" :key="entry.id">
                     <slot name="row" :entry="entry"></slot>
                 </tr>
-
-                <tr v-if="hasMoreEntries" key="olderEntries" class="dontanimate">
-                    <td colspan="100" class="text-center card-bg-secondary py-2">
-                        <small
-                            ><a href="#" v-on:click.prevent="loadOlderEntries" v-if="!loadingMoreEntries"
-                                >Load Older Entries</a
-                            ></small
-                        >
-
-                        <small v-if="loadingMoreEntries">Loading...</small>
-                    </td>
-                </tr>
             </transition-group>
         </table>
+
+        <div
+            v-if="ready && (entries.length > 0 || currentPage > 0)"
+            class="d-flex align-items-center justify-content-between border-top px-3 py-2"
+        >
+            <small>
+                <a href="#" v-if="currentPage > 0 && !loadingPage" v-on:click.prevent="goToPreviousPage">Anterior</a>
+                <span v-else class="text-muted">Anterior</span>
+            </small>
+
+            <small v-if="loadingPage">Loading...</small>
+
+            <small>
+                <a href="#" v-if="hasMoreEntries && !loadingPage" v-on:click.prevent="goToNextPage">Próximo</a>
+                <span v-else class="text-muted">Próximo</span>
+            </small>
+        </div>
     </div>
 </template>
