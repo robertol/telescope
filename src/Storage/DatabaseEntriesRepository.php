@@ -476,6 +476,8 @@ class DatabaseEntriesRepository implements Contract, ClearableRepository, Prunab
             $query->where('type', '!=', 'exception');
         }
 
+        $this->excludeMonitoredEndpointBatches($query);
+
         $totalDeleted = 0;
 
         do {
@@ -485,6 +487,39 @@ class DatabaseEntriesRepository implements Contract, ClearableRepository, Prunab
         } while ($deleted !== 0);
 
         return $totalDeleted;
+    }
+
+    /**
+     * Exclude entries that belong to a monitored HTTP request batch.
+     *
+     * Uses a derived table so MySQL can delete from telescope_entries
+     * while still reading matching batch IDs from the same table.
+     *
+     * @param  \Illuminate\Database\Query\Builder  $query
+     * @return void
+     */
+    protected function excludeMonitoredEndpointBatches($query)
+    {
+        $endpoints = $this->monitoringEndpoints();
+
+        if ($endpoints === []) {
+            return;
+        }
+
+        $preservedBatches = EntryModel::on($this->connection)
+            ->select('batch_id')
+            ->withTelescopeOptions(
+                EntryType::REQUEST,
+                (new EntryQueryOptions)->endpoint(implode(',', $endpoints))
+            );
+
+        $query->whereNotIn(
+            'batch_id',
+            DB::connection($this->connection)
+                ->query()
+                ->fromSub($preservedBatches, 'preserved_monitored_batches')
+                ->select('batch_id')
+        );
     }
 
     /**
