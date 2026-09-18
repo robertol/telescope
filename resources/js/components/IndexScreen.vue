@@ -443,14 +443,12 @@ export default {
                 <slot name="table-header"></slot>
             </thead>
 
-            <transition-group tag="tbody" name="list">
-                <tr v-if="hasNewEntries" key="newEntries" class="dontanimate">
+            <tbody>
+                <tr v-if="hasNewEntries" class="dontanimate">
                     <td colspan="100" class="text-center card-bg-secondary py-2">
-                        <small
-                            ><a href="#" v-on:click.prevent="loadNewEntries" v-if="!loadingNewEntries"
-                                >Load New Entries</a
-                            ></small
-                        >
+                        <small>
+                            <button type="button" class="btn btn-link btn-sm p-0" v-on:click="loadNewEntries" v-if="!loadingNewEntries">Load New Entries</button>
+                        </small>
 
                         <small v-if="loadingNewEntries">Loading...</small>
                     </td>
@@ -459,24 +457,33 @@ export default {
                 <tr v-for="entry in entries" :key="entry.id">
                     <slot name="row" :entry="entry"></slot>
                 </tr>
-            </transition-group>
+            </tbody>
         </table>
 
         <div
             v-if="ready && (entries.length > 0 || currentPage > 0)"
             class="d-flex align-items-center justify-content-between border-top px-3 py-2"
         >
-            <small>
-                <a href="#" v-if="currentPage > 0 && !loadingPage" v-on:click.prevent="goToPreviousPage">Anterior</a>
-                <span v-else class="text-muted">Anterior</span>
-            </small>
+            <button
+                type="button"
+                class="btn btn-link btn-sm p-0"
+                :disabled="currentPage === 0 || loadingPage"
+                v-on:click="goToPreviousPage"
+            >
+                Anterior
+            </button>
 
             <small v-if="loadingPage">Loading...</small>
+            <small v-else>&nbsp;</small>
 
-            <small>
-                <a href="#" v-if="hasMoreEntries && !loadingPage" v-on:click.prevent="goToNextPage">Próximo</a>
-                <span v-else class="text-muted">Próximo</span>
-            </small>
+            <button
+                type="button"
+                class="btn btn-link btn-sm p-0"
+                :disabled="!hasMoreEntries || loadingPage"
+                v-on:click="goToNextPage"
+            >
+                Próximo
+            </button>
         </div>
     </div>
 </template>
