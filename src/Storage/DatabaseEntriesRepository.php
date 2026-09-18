@@ -490,6 +490,20 @@ class DatabaseEntriesRepository implements Contract, ClearableRepository, Prunab
     }
 
     /**
+     * Whether pruning this cutoff would delete more rows than the HTTP limit.
+     *
+     * Reads at most limit + 1 primary keys. A full count would scan the table.
+     */
+    public function pruneExceedsLimit(DateTimeInterface $before, int $limit): bool
+    {
+        return $this->table('telescope_entries')
+            ->where('created_at', '<', $before)
+            ->limit($limit + 1)
+            ->pluck('sequence')
+            ->count() > $limit;
+    }
+
+    /**
      * Exclude entries that belong to a monitored HTTP request batch.
      *
      * Uses a derived table so MySQL can delete from telescope_entries

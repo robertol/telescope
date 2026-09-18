@@ -73,11 +73,54 @@ new Vue({
             autoLoadsNewEntries: localStorage[LOCALSTORAGE_AUTOLOAD_KEY] === '1',
 
             recording: Telescope.recording,
+
+            pruneHours: 48,
+
+            pruning: false,
+
+            pruneAllowed: null,
+
+            pruneLimit: 20000,
+
+            pruneCheckTimer: null,
         };
+    },
+
+    computed: {
+        pruneLabel() {
+            if (this.pruning) {
+                return '...';
+            }
+
+            if (this.pruneAllowed === false) {
+                return 'Bloqueado';
+            }
+
+            return 'Prune';
+        },
+
+        pruneTitle() {
+            if (this.pruneAllowed === false) {
+                return 'Mais de ' + this.pruneLimit + ' registros nesse período. O prune pelo navegador foi bloqueado para não segurar um worker.';
+            }
+
+            if (this.pruneAllowed === null) {
+                return 'Verificando volume de registros...';
+            }
+
+            return 'Apagar registros mais antigos que essas horas';
+        },
+    },
+
+    watch: {
+        pruneHours() {
+            this.schedulePruneCheck();
+        },
     },
 
     created() {
         window.addEventListener('keydown', this.keydownListener);
+        this.refreshPruneAvailability();
     },
 
     destroyed() {
@@ -103,6 +146,60 @@ new Vue({
             }
 
             axios.delete(Telescope.basePath + '/telescope-api/entries').then((response) => location.reload());
+        },
+
+        schedulePruneCheck() {
+            window.clearTimeout(this.pruneCheckTimer);
+            this.pruneAllowed = null;
+            this.pruneCheckTimer = window.setTimeout(() => this.refreshPruneAvailability(), 400);
+        },
+
+        refreshPruneAvailability() {
+            const hours = Number(this.pruneHours);
+
+            if (!Number.isInteger(hours) || hours < 1 || hours > 8760) {
+                this.pruneAllowed = false;
+
+                return;
+            }
+
+            axios.get(Telescope.basePath + '/telescope-api/entries/prune', {params: {hours}}).then((response) => {
+                this.pruneAllowed = response.data.allowed === true;
+                this.pruneLimit = response.data.limit;
+            }).catch(() => {
+                this.pruneAllowed = false;
+            });
+        },
+
+        pruneEntries() {
+            const hours = Number(this.pruneHours);
+
+            if (this.pruneAllowed !== true) {
+                return;
+            }
+
+            if (!Number.isInteger(hours) || hours < 1 || hours > 8760) {
+                window.alert('Informe um número inteiro de horas entre 1 e 8760.');
+
+                return;
+            }
+
+            if (!window.confirm('Apagar registros do Telescope com mais de ' + hours + ' horas? Lotes de endpoints monitorados são mantidos.')) {
+                return;
+            }
+
+            this.pruning = true;
+
+            axios.post(Telescope.basePath + '/telescope-api/entries/prune', {hours}).then((response) => {
+                window.alert((response.data.pruned ?? 0) + ' registros removidos.');
+                window.location.reload();
+            }).catch((error) => {
+                this.pruning = false;
+                const blocked = error.response && error.response.status === 409;
+
+                window.alert(blocked ? error.response.data.message : 'Não foi possível prunar os registros.');
+                this.refreshPruneAvailability();
+            });
         },
 
         keydownListener(event) {

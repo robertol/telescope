@@ -38,7 +38,14 @@
                 <h4 class="mb-0 ml-3"><strong>Laravel</strong> Telescope{{ config('app.name') ? ' - ' . config('app.name') : '' }}</h4>
             </router-link>
 
-            <button class="btn btn-muted ml-auto mr-3 d-flex align-items-center py-2" v-on:click.prevent="toggleRecording" :title="recording ? 'Pause recording' : 'Resume recording'">
+            <label class="d-flex align-items-center mb-0 ml-auto mr-3">
+                <input type="number" min="1" max="8760" class="form-control form-control-sm" style="width: 4.5rem;" v-model.number="pruneHours" :disabled="pruning" title="Horas a manter">
+                <button type="button" class="btn btn-muted ml-2 d-flex align-items-center py-2" v-on:click="pruneEntries" :disabled="pruning || pruneAllowed !== true" :title="pruneTitle">
+                    @{{ pruneLabel }}
+                </button>
+            </label>
+
+            <button class="btn btn-muted mr-3 d-flex align-items-center py-2" v-on:click.prevent="toggleRecording" :title="recording ? 'Pause recording' : 'Resume recording'">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" class="icon" fill="currentColor" v-if="recording">
                     <path d="M5.75 3a.75.75 0 00-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75V3.75A.75.75 0 007.25 3h-1.5zM12.75 3a.75.75 0 00-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75V3.75a.75.75 0 00-.75-.75h-1.5z" />
                 </svg>

@@ -20,6 +20,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | HTTP Prune Limit
+    |--------------------------------------------------------------------------
+    |
+    | Prune from the dashboard runs inside the web request. Above this many
+    | matching rows the button is refused, so one worker cannot sit on a
+    | large delete. The check stops at limit + 1 and does not scan the table.
+    |
+    */
+
+    'prune_request_limit' => 20000,
+
+    /*
+    |--------------------------------------------------------------------------
     | Telescope Domain
     |--------------------------------------------------------------------------
     |

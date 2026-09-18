@@ -3,6 +3,8 @@
 ## [Unreleased](https://github.com/laravel/telescope/compare/v5.23.0...5.x)
 
 * Index lists show 25 entries per page, with previous and next, instead of appending older entries.
+* Header prune control deletes entries older than a chosen number of hours and keeps monitored endpoint batches.
+* The prune button stays disabled when more than 20,000 entries match, so a web request cannot run a large delete.
 
 ## [v5.23.0](https://github.com/laravel/telescope/compare/v5.22.1...v5.23.0) - 2026-08-27
 
