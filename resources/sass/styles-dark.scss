@@ -89,21 +89,6 @@ $badge-warning-color: $white;
 $badge-danger-bg: $red-500;
 $badge-danger-color: $white;
 
-$grid-breakpoints: (
-    xs: 0,
-    sm: 2px,
-    md: 8px,
-    lg: 9px,
-    xl: 10px,
-) !default;
-
-$container-max-widths: (
-    sm: 1920px,
-    md: 1920px,
-    lg: 1920px,
-    xl: 1920px,
-) !default;
-
 .form-control:-moz-focusring {
     text-shadow: none !important;
 }

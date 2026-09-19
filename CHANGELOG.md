@@ -16,6 +16,7 @@
 * Workbench no longer auto-logs a Laravel user on `/`, so `php artisan serve` opens `/telescope`.
 * The dashboard layout is responsive: off-canvas sidebar, stacked cards, and scrollable tables.
 * The workbench `serve` flow requires the Telescope login even when `APP_ENV` is `local`.
+* Vite silences Bootstrap 4 Sass deprecations so `npm run build` stays readable.
 * The sidebar groups traditional watchers under Activity and adds Issues, Users, Settings, and Support.
 * Exceptions use a family list with handled/unhandled filters; the detail screen shows Info, Impact, and collapsed vendor frames.
 * Outgoing Requests lists hosts and a host detail with status/duration charts, source, and 2xx/4xx/5xx filters.
