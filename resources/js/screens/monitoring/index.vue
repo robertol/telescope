@@ -14,6 +14,7 @@ export default {
             ready: false,
             newTag: '',
             newEndpoint: '',
+            openingEndpoint: null,
             requestController: new AbortController(),
         };
     },
@@ -139,6 +140,41 @@ export default {
         },
 
         /**
+         * Open Request Details for the newest request that matches this endpoint.
+         */
+        openRequestDetails(endpoint) {
+            if (this.openingEndpoint) {
+                return;
+            }
+
+            this.openingEndpoint = endpoint;
+
+            axios.post(
+                Telescope.basePath +
+                    '/telescope-api/requests?endpoint=' +
+                    encodeURIComponent(endpoint) +
+                    '&take=1'
+            ).then((response) => {
+                const entry = (response.data.entries || [])[0];
+
+                if (!entry) {
+                    this.alertError('No request recorded for this endpoint yet.');
+
+                    return;
+                }
+
+                this.$router.push({
+                    name: 'request-preview',
+                    params: {id: entry.id},
+                });
+            }).catch(() => {
+                this.alertError('Could not open the request.');
+            }).finally(() => {
+                this.openingEndpoint = null;
+            });
+        },
+
+        /**
          * Navigate to requests filtered by the given endpoint.
          */
         filterByEndpoint(endpoint){
@@ -227,7 +263,23 @@ export default {
                             <a href="#" v-on:click.prevent="filterByEndpoint(endpoint)">{{ truncate(endpoint, 140) }}</a>
                         </td>
 
-                        <td class="table-fit">
+                        <td class="table-fit text-right">
+                            <button
+                                type="button"
+                                class="control-action border-0 bg-transparent p-0 mr-2"
+                                v-on:click="openRequestDetails(endpoint)"
+                                :disabled="openingEndpoint === endpoint"
+                                title="Request Details"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM6.75 9.25a.75.75 0 000 1.5h4.59l-2.1 1.95a.75.75 0 001.02 1.1l3.5-3.25a.75.75 0 000-1.1l-3.5-3.25a.75.75 0 10-1.02 1.1l2.1 1.95H6.75z"
+                                        clip-rule="evenodd"
+                                    />
+                                </svg>
+                            </button>
+
                             <a href="#" class="control-action" v-on:click.prevent="removeEndpoint(endpoint)">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                                     <path

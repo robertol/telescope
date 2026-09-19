@@ -7,7 +7,8 @@ interface ClearableRepository
     /**
      * Clear all of the entries.
      *
+     * @param  bool  $preserveMonitoring
      * @return void
      */
-    public function clear();
+    public function clear($preserveMonitoring = false);
 }

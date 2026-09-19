@@ -140,12 +140,20 @@ new Vue({
             this.recording = !this.recording;
         },
 
-        clearEntries(shouldConfirm = true) {
-            if (shouldConfirm && !confirm('Are you sure you want to delete all Telescope data?')) {
+        clearEntries(shouldConfirm = true, preserveMonitoring = false) {
+            if (shouldConfirm) {
                 return;
             }
 
-            axios.delete(Telescope.basePath + '/telescope-api/entries').then((response) => location.reload());
+            axios.delete(Telescope.basePath + '/telescope-api/entries', {
+                data: {preserve_monitoring: preserveMonitoring},
+            }).then(() => {
+                window.location.reload();
+            }).catch((error) => {
+                const blocked = error.response && error.response.status === 409;
+
+                window.alert(blocked ? error.response.data.message : 'Não foi possível limpar os registros.');
+            });
         },
 
         schedulePruneCheck() {

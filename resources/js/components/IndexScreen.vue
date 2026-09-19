@@ -4,7 +4,7 @@ import _ from 'lodash';
 import axios from 'axios';
 
 export default {
-    props: ['resource', 'title', 'showAllFamily', 'hideSearch', 'endpointOverride'],
+    props: ['resource', 'title', 'showAllFamily', 'hideSearch', 'endpointOverride', 'rememberClosedKey'],
 
 
     /**
@@ -36,6 +36,8 @@ export default {
 
             updateEntriesTimeout: null,
             updateEntriesTimer: 2500,
+
+            collapsed: false,
         };
     },
 
@@ -45,6 +47,10 @@ export default {
      */
     mounted() {
         document.title = this.title + " - Telescope";
+
+        if (this.rememberClosedKey) {
+            this.collapsed = localStorage[this.rememberClosedKey] === '1';
+        }
 
         this.familyHash = this.$route.query.family_hash || '';
 
@@ -311,6 +317,25 @@ export default {
 
 
         /**
+         * Collapse this card and remember only the closed state.
+         */
+        toggleCollapsed() {
+            this.collapsed = !this.collapsed;
+
+            if (!this.rememberClosedKey) {
+                return;
+            }
+
+            if (this.collapsed) {
+                localStorage[this.rememberClosedKey] = '1';
+
+                return;
+            }
+
+            localStorage.removeItem(this.rememberClosedKey);
+        },
+
+        /**
          * Update the existing entries if needed.
          */
         updateEntries(){
@@ -367,9 +392,23 @@ export default {
 <template>
     <div class="card overflow-hidden">
         <div class="card-header d-flex align-items-center justify-content-between">
-            <h2 class="h6 m-0">{{ this.title }}</h2>
+            <div class="d-flex align-items-center">
+                <button
+                    v-if="rememberClosedKey"
+                    type="button"
+                    class="control-action border-0 bg-transparent p-0 mr-2"
+                    v-on:click="toggleCollapsed"
+                    :title="collapsed ? 'Abrir' : 'Fechar'"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" :style="{ transform: collapsed ? 'none' : 'rotate(90deg)', transition: 'transform 0.15s' }">
+                        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                    </svg>
+                </button>
 
-            <div class="form-control-with-icon w-25" v-if="!hideSearch && (tag || entries.length > 0)">
+                <h2 class="h6 m-0">{{ this.title }}</h2>
+            </div>
+
+            <div class="form-control-with-icon w-25" v-if="!collapsed && !hideSearch && (tag || entries.length > 0)">
                 <div class="icon-wrapper">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" class="icon">
                         <path
@@ -390,6 +429,7 @@ export default {
             </div>
         </div>
 
+        <div v-show="!collapsed">
         <p v-if="recordingStatus !== 'enabled'" class="mt-0 mb-0 disabled-watcher d-flex align-items-center">
             <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -484,6 +524,7 @@ export default {
             >
                 Próximo
             </button>
+        </div>
         </div>
     </div>
 </template>

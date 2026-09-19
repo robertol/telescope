@@ -5,20 +5,31 @@ namespace Laravel\Telescope\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Laravel\Telescope\Contracts\ClearableRepository;
 use Laravel\Telescope\Storage\DatabaseEntriesRepository;
 
 class EntriesController extends Controller
 {
     /**
-     * Delete all of the entries from storage.
+     * Delete entries from storage.
      *
-     * @param  \Laravel\Telescope\Contracts\ClearableRepository  $storage
-     * @return void
+     * Preserve monitoring keeps the tag and endpoint lists, plus the entries they cover.
      */
-    public function destroy(ClearableRepository $storage)
+    public function destroy(Request $request, DatabaseEntriesRepository $storage): JsonResponse
     {
-        $storage->clear();
+        $preserveMonitoring = $request->boolean('preserve_monitoring');
+        $limit = $this->httpPruneLimit();
+
+        if ($storage->clearExceedsLimit($preserveMonitoring, $limit)) {
+            return response()->json([
+                'message' => 'Clear recusado: mais de '.$limit.' registros seriam apagados.',
+            ], 409);
+        }
+
+        set_time_limit(0);
+
+        $storage->clear($preserveMonitoring);
+
+        return response()->json(['cleared' => true]);
     }
 
     /**

@@ -12,7 +12,7 @@ export default {
     <div>
         <monitored-requests></monitored-requests>
 
-        <index-screen title="Requests" resource="requests" endpoint-override="">
+        <index-screen title="Requests" resource="requests" endpoint-override="" remember-closed-key="telescopeRequestsCardClosed">
         <tr slot="table-header">
             <th scope="col">Verb</th>
             <th scope="col">Path</th>

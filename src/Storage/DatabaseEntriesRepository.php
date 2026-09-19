@@ -537,15 +537,55 @@ class DatabaseEntriesRepository implements Contract, ClearableRepository, Prunab
     }
 
     /**
-     * Clear all the entries.
+     * Exclude entries that carry a tag currently being monitored.
      *
+     * @param  \Illuminate\Database\Query\Builder  $query
      * @return void
      */
-    public function clear()
+    protected function excludeMonitoredTagEntries($query)
     {
+        $tags = $this->monitoring();
+
+        if ($tags === []) {
+            return;
+        }
+
+        $query->whereNotIn('uuid', function ($subquery) use ($tags) {
+            $subquery->select('entry_uuid')
+                ->from('telescope_entries_tags')
+                ->whereIn('tag', $tags);
+        });
+    }
+
+    /**
+     * Whether clearing would delete more rows than the HTTP limit.
+     *
+     * Reads at most limit + 1 primary keys.
+     */
+    public function clearExceedsLimit(bool $preserveMonitoring, int $limit): bool
+    {
+        $query = $this->entriesPendingClear($preserveMonitoring);
+
+        return $query->limit($limit + 1)->pluck('sequence')->count() > $limit;
+    }
+
+    /**
+     * Clear all of the entries.
+     *
+     * @param  bool  $preserveMonitoring
+     * @return void
+     */
+    public function clear($preserveMonitoring = false)
+    {
+        $query = $this->entriesPendingClear($preserveMonitoring)->orderBy('sequence');
+
         do {
-            $deleted = $this->table('telescope_entries')->orderBy('sequence')->take($this->chunkSize)->delete();
+            $deleted = $query->take($this->chunkSize)->delete();
         } while ($deleted !== 0);
+
+        if ($preserveMonitoring) {
+            return;
+        }
 
         do {
             $deleted = $this->table('telescope_monitoring')->orderBy('tag')->take($this->chunkSize)->delete();
@@ -556,6 +596,24 @@ class DatabaseEntriesRepository implements Contract, ClearableRepository, Prunab
         do {
             $deleted = $this->table('telescope_monitored_endpoints')->orderBy('endpoint')->take($this->chunkSize)->delete();
         } while ($deleted !== 0);
+    }
+
+    /**
+     * Entries a clear would remove.
+     *
+     * @param  bool  $preserveMonitoring
+     * @return \Illuminate\Database\Query\Builder
+     */
+    protected function entriesPendingClear($preserveMonitoring)
+    {
+        $query = $this->table('telescope_entries');
+
+        if ($preserveMonitoring) {
+            $this->excludeMonitoredEndpointBatches($query);
+            $this->excludeMonitoredTagEntries($query);
+        }
+
+        return $query;
     }
 
     /**

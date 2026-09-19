@@ -5,6 +5,10 @@
 * Index lists show 25 entries per page, with previous and next, instead of appending older entries.
 * Header prune control deletes entries older than a chosen number of hours and keeps monitored endpoint batches.
 * The prune button stays disabled when more than 20,000 entries match, so a web request cannot run a large delete.
+* Clear entries offers Delete all, or Preserve Only Monitoring, which keeps monitored tags, endpoints, and their entries.
+* Monitored endpoints have an arrow that opens Request Details for the newest matching request.
+* The Requests card can be collapsed, and it stays closed on the next visit.
+* Each monitored endpoint in Monitored Requests collapses on its own, and closed ones stay closed.
 
 ## [v5.23.0](https://github.com/laravel/telescope/compare/v5.22.1...v5.23.0) - 2026-08-27
 
