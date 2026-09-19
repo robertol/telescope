@@ -9,6 +9,7 @@ use Laravel\Telescope\Actions\UninstallAction;
 use Laravel\Telescope\Contracts\ClearableRepository;
 use Laravel\Telescope\Contracts\EntriesRepository;
 use Laravel\Telescope\Contracts\PrunableRepository;
+use Laravel\Telescope\Storage\DashboardAggregator;
 use Laravel\Telescope\Storage\DatabaseEntriesRepository;
 
 class TelescopeServiceProvider extends ServiceProvider
@@ -169,6 +170,12 @@ class TelescopeServiceProvider extends ServiceProvider
         $this->app->when(DatabaseEntriesRepository::class)
             ->needs('$chunkSize')
             ->give(fn () => config('telescope.storage.database.chunk'));
+
+        $this->app->singleton(DashboardAggregator::class);
+
+        $this->app->when(DashboardAggregator::class)
+            ->needs('$connection')
+            ->give(fn () => config('telescope.storage.database.connection'));
     }
 
     /**

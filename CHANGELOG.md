@@ -9,6 +9,17 @@
 * Monitored endpoints have an arrow that opens Request Details for the newest matching request.
 * The Requests card can be collapsed, and it stays closed on the next visit.
 * Each monitored endpoint in Monitored Requests collapses on its own, and closed ones stay closed.
+* Dashboard home clones the Nightwatch Activity and Application cards, with a 1H–30D range.
+* Dashboard cards use Nightwatch inner padding, a 12px radius, a 1440px content cap, and horizontal legends.
+* Sidebar matches Nightwatch: outline icons, Activity tree, Monitoring section, and a muted Issues badge.
+* The sidebar footer shows the signed-in Telescope user next to Logout.
+* Workbench no longer auto-logs a Laravel user on `/`, so `php artisan serve` opens `/telescope`.
+* The dashboard layout is responsive: off-canvas sidebar, stacked cards, and scrollable tables.
+* The workbench `serve` flow requires the Telescope login even when `APP_ENV` is `local`.
+* The sidebar groups traditional watchers under Activity and adds Issues, Users, Settings, and Support.
+* Exceptions use a family list with handled/unhandled filters; the detail screen shows Info, Impact, and collapsed vendor frames.
+* Outgoing Requests lists hosts and a host detail with status/duration charts, source, and 2xx/4xx/5xx filters.
+* The dashboard has its own login screen; Users lists authenticated actors already stored in Telescope entries.
 
 ## [v5.23.0](https://github.com/laravel/telescope/compare/v5.22.1...v5.23.0) - 2026-08-27
 

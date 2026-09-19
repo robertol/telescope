@@ -44,6 +44,7 @@ class ClientRequestWatcher extends Watcher
                 'uri' => $event->request->url(),
                 'headers' => $this->headers($event->request->headers()),
                 'payload' => $this->payload($this->input($event->request)),
+                'source' => $this->source(),
             ])
             ->tags([$event->request->toPsrRequest()->getUri()->getHost()])
         );
@@ -72,6 +73,7 @@ class ClientRequestWatcher extends Watcher
                 'response_headers' => $this->headers($event->response->headers()),
                 'response' => $this->response($event->response),
                 'duration' => $this->duration($event->response),
+                'source' => $this->source(),
             ])
             ->tags([$event->request->toPsrRequest()->getUri()->getHost()])
         );
@@ -238,6 +240,16 @@ class ClientRequestWatcher extends Watcher
 
             return [$data['name'] => $value];
         })->toArray();
+    }
+
+    /**
+     * Whether the HTTP client call originated from a web request or a job/console worker.
+     *
+     * @return string
+     */
+    protected function source()
+    {
+        return app()->runningInConsole() ? 'job' : 'request';
     }
 
     /**

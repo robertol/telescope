@@ -114,7 +114,7 @@ class Telescope
      *
      * @var bool
      */
-    public static $useDarkTheme = false;
+    public static $useDarkTheme = true;
 
     /**
      * The CSP nonce to use for style and script tags.
@@ -852,12 +852,8 @@ class Telescope
     public static function css()
     {
         if ($hot = static::viteDevServerUrl()) {
-            $styles = static::$useDarkTheme
-                ? 'resources/sass/styles-dark.scss'
-                : 'resources/sass/styles.scss';
-
             return new HtmlString(
-                '<link rel="stylesheet" href="'.$hot.'/'.$styles.'">'
+                '<link rel="stylesheet" href="'.$hot.'/resources/sass/styles-dark.scss">'
             );
         }
 
@@ -865,13 +861,10 @@ class Telescope
             throw new RuntimeException('Unable to load the Telescope dashboard app CSS.');
         }
 
-        $styles = match (static::$useDarkTheme) {
-            true => @file_get_contents(__DIR__.'/../dist/styles-dark.css'),
-            default => @file_get_contents(__DIR__.'/../dist/styles.css'),
-        };
+        $styles = @file_get_contents(__DIR__.'/../dist/styles-dark.css');
 
         if ($styles === false) {
-            throw new RuntimeException('Unable to load the '.(static::$useDarkTheme ? 'dark' : 'light').' Telescope dashboard styles.');
+            throw new RuntimeException('Unable to load the dark Telescope dashboard styles.');
         }
 
         $nonceAttribute = static::$nonceAttribute;
@@ -989,6 +982,39 @@ class Telescope
             'path' => config('telescope.path'),
             'timezone' => config('app.timezone'),
             'recording' => ! cache('telescope:pause-recording'),
+            'appName' => config('app.name'),
+            'environment' => app()->environment(),
+            'user' => static::scriptUser(),
+        ];
+    }
+
+    /**
+     * The signed-in dashboard user exposed to the frontend.
+     *
+     * @return array{id: mixed, name: string, email: ?string}|null
+     */
+    protected static function scriptUser(): ?array
+    {
+        $dashboard = static::dashboardUser(request());
+
+        if ($dashboard) {
+            return [
+                'id' => $dashboard->id,
+                'name' => (string) $dashboard->name,
+                'email' => $dashboard->email,
+            ];
+        }
+
+        $user = request()->user();
+
+        if (! $user) {
+            return null;
+        }
+
+        return [
+            'id' => $user->getAuthIdentifier(),
+            'name' => (string) ($user->name ?? $user->email ?? $user->getAuthIdentifier()),
+            'email' => $user->email ?? null,
         ];
     }
 

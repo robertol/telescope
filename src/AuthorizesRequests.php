@@ -2,6 +2,8 @@
 
 namespace Laravel\Telescope;
 
+use Laravel\Telescope\Storage\TelescopeUser;
+
 trait AuthorizesRequests
 {
     /**
@@ -32,8 +34,30 @@ trait AuthorizesRequests
      */
     public static function check($request)
     {
+        if (static::dashboardUser($request)) {
+            return true;
+        }
+
         return (static::$authUsing ?: function () {
             return app()->environment('local');
         })($request);
+    }
+
+    /**
+     * The signed-in Telescope dashboard user, if any.
+     */
+    public static function dashboardUser($request): ?TelescopeUser
+    {
+        if (! $request->hasSession()) {
+            return null;
+        }
+
+        $id = $request->session()->get('telescope_user_id');
+
+        if (! $id) {
+            return null;
+        }
+
+        return TelescopeUser::query()->find($id);
     }
 }

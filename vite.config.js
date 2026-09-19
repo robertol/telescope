@@ -6,7 +6,7 @@ export default {
     build: {
         assetsDir: '',
         rollupOptions: {
-            input: ['resources/js/app.js', 'resources/sass/styles.scss', 'resources/sass/styles-dark.scss'],
+            input: ['resources/js/app.js', 'resources/sass/styles-dark.scss'],
             output: {
                 entryFileNames: '[name].js',
                 chunkFileNames: '[name].js',

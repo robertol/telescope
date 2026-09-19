@@ -6,80 +6,80 @@ $font-weight-bold: 600;
 $font-size-base: 1rem;
 $badge-font-size: 0.875rem;
 
-$primary: #4040c8;
-$secondary: $gray-600;
+$primary: #3b6ff5;
+$secondary: #71717a;
 $success: $emerald-600;
 $info: $blue-600;
 $warning: $amber-600;
 $danger: $red-600;
 
-$body-bg: $gray-900;
-$body-color: $gray-100;
+$body-bg: #0b0b0d;
+$body-color: #f4f4f5;
 
-$text-muted: $gray-400;
+$text-muted: #9a9aa8;
 
-$border-radius-lg: 6px;
+$border-radius-lg: 10px;
 
-$logo-color: $gray-200;
+$logo-color: #f4f4f5;
 
-$link-color: $indigo-400;
-$link-hover-color: $indigo-300;
+$link-color: #a5b4fc;
+$link-hover-color: #c7d2fe;
 
-$sidebar-nav-color: $gray-400;
-$sidebar-nav-hover-color: $gray-300;
-$sidebar-nav-hover-bg: $gray-800;
-$sidebar-nav-icon-color: $gray-500;
-$sidebar-nav-active-bg: $gray-800;
-$sidebar-nav-active-color: $indigo-400;
-$sidebar-nav-active-icon-color: $indigo-500;
+$sidebar-nav-color: #9a9aa8;
+$sidebar-nav-hover-color: #f4f4f5;
+$sidebar-nav-hover-bg: #1a1a1f;
+$sidebar-nav-icon-color: #71717a;
+$sidebar-nav-active-bg: #1e1e24;
+$sidebar-nav-active-color: #fafafa;
+$sidebar-nav-active-icon-color: #fafafa;
 
-$pill-link: $gray-400;
-$pill-link-active: $indigo-300;
-$pill-link-hover: $gray-200;
+$pill-link: #9a9aa8;
+$pill-link-active: #f4f4f5;
+$pill-link-hover: #e4e4e7;
 
-$border-color: $gray-600;
-$table-border-color: $gray-700;
-$table-headers-color: $gray-800;
-$table-hover-bg: $gray-700;
+$border-color: #232329;
+$table-border-color: #232329;
+$table-headers-color: #121214;
+$table-hover-bg: #1a1a1f;
 
-$header-border-color: $table-border-color;
+$header-border-color: #232329;
 
-$input-bg: $gray-800;
-$input-color: $gray-200;
-$input-border-color: $border-color;
+$input-bg: #141416;
+$input-color: #f4f4f5;
+$input-border-color: #2a2a32;
 
-$card-cap-bg: $gray-700;
-$card-bg-secondary: $gray-800;
-$card-bg: $gray-800;
-$card-border-radius: $border-radius-lg;
+$card-cap-bg: #141416;
+$card-bg-secondary: #121214;
+$card-bg: #141416;
+$card-border-radius: 16px;
 
-$code-bg: #292d3e;
+$code-bg: #121214;
 
-$modal-content-bg: $table-headers-color;
-$modal-backdrop-bg: $gray-600;
-$modal-footer-border-color: $input-border-color;
-$modal-header-border-color: $input-border-color;
+$modal-content-bg: #141416;
+$modal-backdrop-bg: #000000;
+$modal-footer-border-color: #232329;
+$modal-header-border-color: #232329;
 
-$new-entries-bg: $indigo-900;
-$new-code-entries-bg: $gray-600;
+$new-entries-bg: #1e1b4b;
+$new-code-entries-bg: #27272a;
 
-$control-action-icon-color: $gray-500;
-$control-action-icon-hover: $indigo-400;
+$control-action-icon-color: #71717a;
+$control-action-icon-hover: #f4f4f5;
 
-$nav-pills-link-active-bg: $gray-800;
+$nav-pills-link-active-bg: #1a1a1f;
 
-$dropdown-bg: $gray-700;
-$dropdown-link-color: $white;
+$dropdown-bg: #18181b;
+$dropdown-link-color: #f4f4f5;
 
-$btn-muted-color: $gray-400;
-$btn-muted-bg: $gray-800;
-$btn-muted-hover-color: $gray-300;
-$btn-muted-hover-bg: $gray-700;
-$btn-muted-active-color: $white;
+$btn-muted-color: #9a9aa8;
+$btn-muted-bg: #1a1a1f;
+$btn-muted-hover-color: #f4f4f5;
+$btn-muted-hover-bg: #222228;
+$btn-muted-active-color: #ffffff;
 $btn-muted-active-bg: $primary;
 
-$badge-secondary-bg: $gray-300;
-$badge-secondary-color: $gray-700;
+$badge-secondary-bg: #27272a;
+$badge-secondary-color: #d4d4d8;
 $badge-success-bg: $emerald-500;
 $badge-success-color: $white;
 $badge-info-bg: $blue-500;
@@ -98,10 +98,10 @@ $grid-breakpoints: (
 ) !default;
 
 $container-max-widths: (
-    sm: 1137px,
-    md: 1138px,
-    lg: 1139px,
-    xl: 1140px,
+    sm: 1920px,
+    md: 1920px,
+    lg: 1920px,
+    xl: 1920px,
 ) !default;
 
 .form-control:-moz-focusring {

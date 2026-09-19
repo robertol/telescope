@@ -1,43 +1,52 @@
 <script type="text/ecmascript-6">
-import _ from "lodash"
-
 export default {
     props: ['trace'],
 
-    /**
-     * The component's data.
-     */
     data() {
         return {
-            minimumLines: 5,
-            showAll: false,
+            showVendor: false,
         };
     },
 
     computed: {
-        lines(){
-            return this.showAll ? _.take(this.trace, 1000) : _.take(this.trace, this.minimumLines);
-        }
-    }
-}
+        frames() {
+            return (this.trace || []).map((line) => {
+                const file = line.file || '';
+                const vendor = /[\/\\]vendor[\/\\]/.test(file);
+
+                return Object.assign({}, line, { vendor });
+            });
+        },
+
+        hiddenCount() {
+            return this.frames.filter((line) => line.vendor).length;
+        },
+
+        lines() {
+            if (this.showVendor) {
+                return this.frames;
+            }
+
+            return this.frames.filter((line) => !line.vendor);
+        },
+    },
+};
 </script>
 
 <template>
     <table class="table mb-0">
         <tbody>
-            <tr v-for="line in lines">
+            <tr v-for="(line, index) in lines" :key="index">
                 <td class="card-bg-secondary">
                     <code>{{ line.file }}:{{ line.line }}</code>
                 </td>
             </tr>
 
-            <tr v-if="!showAll">
+            <tr v-if="!showVendor && hiddenCount">
                 <td class="card-bg-secondary">
-                    <a href="*" v-on:click.prevent="showAll = true">Show All</a>
+                    <a href="#" v-on:click.prevent="showVendor = true">{{ hiddenCount }} hidden lines</a>
                 </td>
             </tr>
         </tbody>
     </table>
 </template>
-
-<style scoped></style>

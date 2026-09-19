@@ -13,6 +13,7 @@ import monitoredRequests from './components/MonitoredRequests.vue';
 import previewScreen from './components/PreviewScreen.vue';
 import alert from './components/Alert.vue';
 import copyClipboard from './components/CopyClipboard.vue';
+import sidebar from './components/Sidebar.vue';
 
 import 'bootstrap';
 
@@ -52,6 +53,7 @@ Vue.component('monitored-requests', monitoredRequests);
 Vue.component('preview-screen', previewScreen);
 Vue.component('alert', alert);
 Vue.component('copy-clipboard', copyClipboard);
+Vue.component('sidebar', sidebar);
 
 Vue.mixin(Base);
 
@@ -83,6 +85,8 @@ new Vue({
             pruneLimit: 20000,
 
             pruneCheckTimer: null,
+
+            sidebarOpen: false,
         };
     },
 
@@ -115,6 +119,10 @@ new Vue({
     watch: {
         pruneHours() {
             this.schedulePruneCheck();
+        },
+
+        $route() {
+            this.sidebarOpen = false;
         },
     },
 
@@ -211,6 +219,12 @@ new Vue({
         },
 
         keydownListener(event) {
+            if (event.key === 'Escape' && this.sidebarOpen) {
+                this.sidebarOpen = false;
+
+                return;
+            }
+
             if (event.metaKey && event.key === 'k') {
                 this.clearEntries(false);
             }

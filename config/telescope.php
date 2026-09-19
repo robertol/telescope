@@ -59,6 +59,29 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Dashboard Authentication
+    |--------------------------------------------------------------------------
+    |
+    | Telescope keeps its own dashboard users in `telescope_users`, independent
+    | of the application's users table. The default account is created when
+    | the table is empty so you can sign in and register the others.
+    |
+    | Laravel guards remain a fallback for hosts that already authorize via
+    | viewTelescope.
+    |
+    */
+
+    'auth' => [
+        'guards' => ['web'],
+        'default' => [
+            'name' => env('TELESCOPE_USER_NAME', 'Telescope'),
+            'email' => env('TELESCOPE_USER_EMAIL', 'telescope@local'),
+            'password' => env('TELESCOPE_USER_PASSWORD', 'telescope'),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Telescope Storage Driver
     |--------------------------------------------------------------------------
     |

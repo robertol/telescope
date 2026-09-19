@@ -2,6 +2,23 @@
 
 use Illuminate\Support\Facades\Route;
 
+Route::get('/login', 'LoginController@show');
+Route::post('/telescope-api/login', 'LoginController@store');
+Route::post('/telescope-api/logout', 'LoginController@destroy');
+
+Route::get('/telescope-api/accounts', 'AccountController@index');
+Route::post('/telescope-api/accounts', 'AccountController@store');
+Route::delete('/telescope-api/accounts/{id}', 'AccountController@destroy');
+
+Route::get('/telescope-api/dashboard', 'DashboardController@index');
+Route::get('/telescope-api/settings', 'DashboardController@settings');
+Route::get('/telescope-api/users', 'DashboardController@users');
+
+Route::get('/telescope-api/exceptions/summary', 'ExceptionSummaryController@index');
+
+Route::get('/telescope-api/outgoing-requests/hosts', 'OutgoingRequestController@hosts');
+Route::get('/telescope-api/outgoing-requests', 'OutgoingRequestController@index');
+
 // Mail entries...
 Route::post('/telescope-api/mail', 'MailController@index');
 Route::get('/telescope-api/mail/{telescopeEntryId}', 'MailController@show');

@@ -474,10 +474,10 @@ export default {
             <span>We didn't find anything - just empty space.</span>
         </div>
 
+        <div class="table-responsive" v-if="ready && entries.length > 0">
         <table
             id="indexScreen"
             class="table table-hover mb-0 penultimate-column-right"
-            v-if="ready && entries.length > 0"
         >
             <thead>
                 <slot name="table-header"></slot>
@@ -499,6 +499,7 @@ export default {
                 </tr>
             </tbody>
         </table>
+        </div>
 
         <div
             v-if="ready && (entries.length > 0 || currentPage > 0)"

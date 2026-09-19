@@ -32,11 +32,32 @@ import gates from './screens/gates/index.vue';
 import gatesPreview from './screens/gates/preview.vue';
 import views from './screens/views/index.vue';
 import viewsPreview from './screens/views/preview.vue';
-import clientRequests from './screens/client-requests/index.vue';
 import clientRequestsPreview from './screens/client-requests/preview.vue';
+import dashboard from './screens/dashboard/index.vue';
+import users from './screens/users/index.vue';
+import settings from './screens/settings/index.vue';
+import support from './screens/support/index.vue';
+import outgoingRequests from './screens/outgoing-requests/index.vue';
+import outgoingRequestHost from './screens/outgoing-requests/host.vue';
 
 export default [
-    { path: '/', redirect: '/requests' },
+    { path: '/', name: 'dashboard', component: dashboard },
+    { path: '/issues', redirect: '/exceptions' },
+    { path: '/users', name: 'users', component: users },
+    { path: '/settings', name: 'settings', component: settings },
+    { path: '/support', name: 'support', component: support },
+
+    {
+        path: '/outgoing-requests/:host',
+        name: 'outgoing-request-host',
+        component: outgoingRequestHost,
+    },
+    {
+        path: '/outgoing-requests',
+        name: 'outgoing-requests',
+        component: outgoingRequests,
+    },
+    { path: '/client-requests', redirect: '/outgoing-requests' },
 
     {
         path: '/mail/:id',
@@ -246,11 +267,5 @@ export default [
         path: '/client-requests/:id',
         name: 'client-request-preview',
         component: clientRequestsPreview,
-    },
-
-    {
-        path: '/client-requests',
-        name: 'client-requests',
-        component: clientRequests,
     },
 ];

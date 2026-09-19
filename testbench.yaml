@@ -11,4 +11,4 @@ seeders:
 
 workbench:
   start: '/telescope'
-  user: test@example.com
+  user: null

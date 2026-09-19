@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Laravel\Telescope\Contracts\EntriesRepository;
 use Laravel\Telescope\EntryType;
 use Laravel\Telescope\EntryUpdate;
+use Laravel\Telescope\Storage\DashboardAggregator;
 use Laravel\Telescope\Storage\EntryQueryOptions;
 use Laravel\Telescope\Watchers\ExceptionWatcher;
 
@@ -33,9 +34,30 @@ class ExceptionController extends EntryController
     }
 
     /**
+     * Get an entry with the given ID.
+     *
+     * @param  \Laravel\Telescope\Contracts\EntriesRepository  $storage
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function show(EntriesRepository $storage, $id)
+    {
+        $entry = $storage->find($id)->generateAvatar();
+
+        return response()->json([
+            'entry' => $entry,
+            'batch' => $storage->get(null, EntryQueryOptions::forBatchId($entry->batchId)->limit(-1)),
+            'impact' => $entry->familyHash
+                ? app(DashboardAggregator::class)->exceptionImpact((string) $entry->familyHash)
+                : null,
+        ]);
+    }
+
+    /**
      * Update an entry with the given ID.
      *
      * @param  \Laravel\Telescope\Contracts\EntriesRepository  $storage
+     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
      */
