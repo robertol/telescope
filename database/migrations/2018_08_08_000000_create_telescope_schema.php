@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Database\Connection;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\Schema;
 
@@ -16,6 +15,10 @@ return new class extends Migration
 
     /**
      * Run the migrations.
+     *
+     * PostgreSQL only: create an isolated schema. Tables are created there by
+     * later Telescope migrations via search_path. Existing public tables are
+     * left untouched — relocating them deadlocks when Telescope is still writing.
      */
     public function up(): void
     {
@@ -25,27 +28,10 @@ return new class extends Migration
             return;
         }
 
-        $schema = $this->schemaName();
-        $quotedSchema = $this->quoteIdent($schema);
-
-        $connection->statement("CREATE SCHEMA IF NOT EXISTS {$quotedSchema}");
-
-        foreach ($this->tables() as $table) {
-            if (! $this->tableExistsInSchema($connection, 'public', $table)) {
-                continue;
-            }
-
-            if ($this->tableExistsInSchema($connection, $schema, $table)) {
-                continue;
-            }
-
-            $connection->statement(sprintf(
-                'ALTER TABLE %s.%s SET SCHEMA %s',
-                $this->quoteIdent('public'),
-                $this->quoteIdent($table),
-                $quotedSchema
-            ));
-        }
+        $connection->statement(sprintf(
+            'CREATE SCHEMA IF NOT EXISTS %s',
+            $this->quoteIdent($this->schemaName())
+        ));
     }
 
     /**
@@ -59,43 +45,10 @@ return new class extends Migration
             return;
         }
 
-        $schema = $this->schemaName();
-
-        foreach ($this->tables() as $table) {
-            if (! $this->tableExistsInSchema($connection, $schema, $table)) {
-                continue;
-            }
-
-            if ($this->tableExistsInSchema($connection, 'public', $table)) {
-                continue;
-            }
-
-            $connection->statement(sprintf(
-                'ALTER TABLE %s.%s SET SCHEMA %s',
-                $this->quoteIdent($schema),
-                $this->quoteIdent($table),
-                $this->quoteIdent('public')
-            ));
-        }
-
         $connection->statement(sprintf(
             'DROP SCHEMA IF EXISTS %s',
-            $this->quoteIdent($schema)
+            $this->quoteIdent($this->schemaName())
         ));
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function tables(): array
-    {
-        return [
-            'telescope_entries_tags',
-            'telescope_entries',
-            'telescope_monitoring',
-            'telescope_monitored_endpoints',
-            'telescope_users',
-        ];
     }
 
     private function schemaName(): string
@@ -114,15 +67,5 @@ return new class extends Migration
     private function quoteIdent(string $name): string
     {
         return '"'.str_replace('"', '""', $name).'"';
-    }
-
-    private function tableExistsInSchema(Connection $connection, string $schema, string $table): bool
-    {
-        $result = $connection->selectOne(
-            'select 1 from information_schema.tables where table_schema = ? and table_name = ?',
-            [$schema, $table]
-        );
-
-        return $result !== null;
     }
 };

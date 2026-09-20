@@ -2,7 +2,7 @@
 
 ## [Unreleased](https://github.com/laravel/telescope/compare/v5.23.0...5.x)
 
-* Telescope persists through a dedicated `telescope` database connection that clones mysql, mariadb, pgsql, sqlite, or sqlsrv. PostgreSQL uses schema `telescope` instead of `public`.
+* Telescope persists through a dedicated `telescope` database connection that clones mysql, mariadb, pgsql, sqlite, or sqlsrv. PostgreSQL uses schema `telescope` instead of `public`. Existing `public` tables are not moved; migrate creates the isolated schema and new tables there.
 * Dashboard and exception charts default to the last 24 hours.
 * Dashboard users created by the default installer must change their password on first access before using Telescope.
 * The login screen no longer displays the default Telescope account email.
