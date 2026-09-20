@@ -142,37 +142,40 @@ class TelescopeServiceProvider extends ServiceProvider
     {
         $this->app->booting(function () {
             $config = $this->app->make('config');
+            $factory = new TelescopeConnectionFactory;
 
-            if (is_array($config->get('database.connections.telescope'))) {
-                return;
+            if (! is_array($config->get('database.connections.telescope'))) {
+                $storage = $config->get('telescope.storage.database', []);
+                $driver = $storage['driver'] ?? $config->get('database.default', 'sqlite');
+
+                $connection = $factory->make(
+                    $config->get('database.connections', []),
+                    (string) $driver,
+                    [
+                        'url' => $storage['url'] ?? null,
+                        'host' => $storage['host'] ?? null,
+                        'port' => $storage['port'] ?? null,
+                        'database' => $storage['database'] ?? null,
+                        'username' => $storage['username'] ?? null,
+                        'password' => $storage['password'] ?? null,
+                        'unix_socket' => $storage['unix_socket'] ?? null,
+                        'charset' => $storage['charset'] ?? null,
+                        'collation' => $storage['collation'] ?? null,
+                        'sslmode' => $storage['sslmode'] ?? null,
+                    ],
+                    (string) ($storage['search_path'] ?? 'telescope')
+                );
+
+                if ($connection !== null) {
+                    $config->set('database.connections.telescope', $connection);
+                }
             }
 
-            $storage = $config->get('telescope.storage.database', []);
-            $driver = $storage['driver'] ?? $config->get('database.default', 'sqlite');
-
-            $connection = (new TelescopeConnectionFactory)->make(
-                $config->get('database.connections', []),
-                (string) $driver,
-                [
-                    'url' => $storage['url'] ?? null,
-                    'host' => $storage['host'] ?? null,
-                    'port' => $storage['port'] ?? null,
-                    'database' => $storage['database'] ?? null,
-                    'username' => $storage['username'] ?? null,
-                    'password' => $storage['password'] ?? null,
-                    'unix_socket' => $storage['unix_socket'] ?? null,
-                    'charset' => $storage['charset'] ?? null,
-                    'collation' => $storage['collation'] ?? null,
-                    'sslmode' => $storage['sslmode'] ?? null,
-                ],
-                (string) ($storage['search_path'] ?? 'telescope')
+            $configured = (string) $config->get('telescope.storage.database.connection', 'telescope');
+            $config->set(
+                'telescope.storage.database.connection',
+                $factory->resolveStorageConnectionName($configured)
             );
-
-            if ($connection === null) {
-                return;
-            }
-
-            $config->set('database.connections.telescope', $connection);
         });
     }
 

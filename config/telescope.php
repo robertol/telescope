@@ -95,7 +95,15 @@ return [
 
     'storage' => [
         'database' => [
-            'connection' => env('TELESCOPE_DB_CONNECTION', 'telescope'),
+            'connection' => (static function (): string {
+                $connection = (string) env('TELESCOPE_DB_CONNECTION', 'telescope');
+
+                if (in_array($connection, ['pgsql', 'mysql', 'mariadb', 'sqlsrv'], true)) {
+                    return 'telescope';
+                }
+
+                return $connection === '' ? 'telescope' : $connection;
+            })(),
             'chunk' => 1000,
             'driver' => env('TELESCOPE_DB_DRIVER'),
             'url' => env('TELESCOPE_DB_URL'),

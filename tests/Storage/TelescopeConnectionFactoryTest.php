@@ -46,6 +46,17 @@ class TelescopeConnectionFactoryTest extends TestCase
         $this->assertArrayNotHasKey('unix_socket', $connection);
     }
 
+    public function test_does_not_store_on_the_application_pgsql_connection()
+    {
+        $factory = new TelescopeConnectionFactory;
+
+        $this->assertSame('telescope', $factory->resolveStorageConnectionName('pgsql'));
+        $this->assertSame('telescope', $factory->resolveStorageConnectionName('mysql'));
+        $this->assertSame('telescope', $factory->resolveStorageConnectionName('mariadb'));
+        $this->assertSame('sqlite', $factory->resolveStorageConnectionName('sqlite'));
+        $this->assertSame('telescope', $factory->resolveStorageConnectionName('telescope'));
+    }
+
     public function test_applies_overrides_without_forcing_pgsql()
     {
         $connection = (new TelescopeConnectionFactory)->make($this->connections(), 'mysql', [

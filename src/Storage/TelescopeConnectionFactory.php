@@ -38,6 +38,22 @@ class TelescopeConnectionFactory
     }
 
     /**
+     * Resolve the Laravel connection name used to persist Telescope data.
+     *
+     * Driver names (pgsql, mysql, …) belong on TELESCOPE_DB_DRIVER. Using them
+     * as TELESCOPE_DB_CONNECTION would write to the application schema (public)
+     * instead of the isolated telescope connection.
+     */
+    public function resolveStorageConnectionName(string $configured): string
+    {
+        if (in_array($configured, ['pgsql', 'mysql', 'mariadb', 'sqlsrv'], true)) {
+            return 'telescope';
+        }
+
+        return $configured === '' ? 'telescope' : $configured;
+    }
+
+    /**
      * Resolve a schema name that is not public.
      */
     protected function isolatedSchema(string $searchPath): string
