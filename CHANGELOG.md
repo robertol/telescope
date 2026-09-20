@@ -2,6 +2,12 @@
 
 ## [Unreleased](https://github.com/laravel/telescope/compare/v5.23.0...5.x)
 
+* The Exceptions sparkline sits in a Nightwatch-style card with axis labels.
+* Dashboard and exception charts default to the last 24 hours.
+* Dashboard users created by the default installer must change their password on first access before using Telescope.
+* The login screen no longer displays the default Telescope account email.
+* Exception sparkline fills empty hour/minute buckets across the selected period so bars stay time-aligned instead of stretching sparse events across the chart.
+* Dashboard aggregation reads JSON scalars instead of full entry payloads, reuses one request pass for slow routes, skips job JSON when there are more than 5,000 jobs, caches the summary for 60 seconds, and adds a `(type, created_at)` index.
 * Index lists show 25 entries per page, with previous and next, instead of appending older entries.
 * Header prune control deletes entries older than a chosen number of hours and keeps monitored endpoint batches.
 * The prune button stays disabled when more than 20,000 entries match, so a web request cannot run a large delete.

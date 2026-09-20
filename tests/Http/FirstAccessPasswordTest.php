@@ -4,18 +4,18 @@ namespace Laravel\Telescope\Tests\Http;
 
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Laravel\Telescope\TelescopeApplicationServiceProvider;
 use Laravel\Telescope\Tests\FeatureTestCase;
 use Orchestra\Testbench\Http\Middleware\VerifyCsrfToken;
-use Workbench\App\Providers\TelescopeServiceProvider as WorkbenchTelescopeServiceProvider;
 
-class WorkbenchLoginTest extends FeatureTestCase
+class FirstAccessPasswordTest extends FeatureTestCase
 {
     /** {@inheritdoc} */
     #[\Override]
     protected function getPackageProviders($app)
     {
         return array_merge(parent::getPackageProviders($app), [
-            WorkbenchTelescopeServiceProvider::class,
+            TelescopeApplicationServiceProvider::class,
         ]);
     }
 
@@ -39,36 +39,18 @@ class WorkbenchLoginTest extends FeatureTestCase
         $this->withoutMiddleware([VerifyCsrfToken::class, ValidateCsrfToken::class, PreventRequestForgery::class]);
     }
 
-    public function test_guest_is_redirected_to_login_in_the_local_workbench(): void
+    public function test_local_dashboard_is_blocked_until_the_default_password_is_changed(): void
     {
         $this->assertTrue($this->app->environment('local'));
 
         $this->get('/telescope')->assertRedirect('/telescope/login');
-        $this->get('/telescope/login')->assertSuccessful();
-    }
 
-    public function test_login_screen_does_not_reveal_the_default_account(): void
-    {
-        $this->get('/telescope/login')
-            ->assertSuccessful()
-            ->assertDontSee('Default account')
-            ->assertDontSee('telescope@local', false);
-    }
-
-    public function test_default_telescope_user_can_sign_in_on_the_local_workbench(): void
-    {
         $this->postJson('/telescope/telescope-api/login', [
             'email' => 'telescope@local',
             'password' => 'telescope',
-        ])->assertSuccessful()->assertJsonPath('ok', true)->assertJsonPath('must_change_password', true);
+        ])->assertSuccessful()->assertJsonPath('must_change_password', true);
 
-        $this->postJson('/telescope/telescope-api/password', [
-            'current_password' => 'telescope',
-            'password' => 'new-secret-pass',
-            'password_confirmation' => 'new-secret-pass',
-        ])->assertSuccessful();
-
-        $this->get('/telescope')->assertSuccessful();
-        $this->get('/telescope/login')->assertRedirect('/telescope');
+        $this->get('/telescope')->assertRedirect('/telescope/password');
+        $this->getJson('/telescope/telescope-api/dashboard')->assertForbidden();
     }
 }

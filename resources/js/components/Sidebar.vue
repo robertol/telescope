@@ -87,7 +87,7 @@ export default {
 
         refreshBadge() {
             axios
-                .get(Telescope.basePath + '/telescope-api/exceptions/summary', { params: { hours: 336 } })
+                .get(Telescope.basePath + '/telescope-api/exceptions/summary', { params: { hours: 24 } })
                 .then((response) => {
                     this.unhandled = response.data.unhandled || 0;
                 })

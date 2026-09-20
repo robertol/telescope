@@ -61,6 +61,33 @@ class ExceptionSummaryTest extends FeatureTestCase
             ->assertJsonPath('families.0.latest_id', $latestOpen->uuid);
     }
 
+    public function test_exception_summary_timeline_fills_empty_hour_buckets_across_the_period(): void
+    {
+        $this->createException([
+            'class' => 'RuntimeException',
+            'message' => 'Now',
+        ], ['family_hash' => 'fam-now', 'created_at' => now()]);
+
+        $this->createException([
+            'class' => 'RuntimeException',
+            'message' => 'Earlier',
+        ], ['family_hash' => 'fam-earlier', 'created_at' => now()->subHours(40)]);
+
+        $timeline = $this->getJson('/telescope/telescope-api/exceptions/summary?hours=336')
+            ->assertSuccessful()
+            ->json('timeline');
+
+        $this->assertGreaterThan(300, count($timeline));
+        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:00:00$/', $timeline[0]['bucket']);
+        $this->assertSame(2, (int) collect($timeline)->sum('total'));
+        $this->assertGreaterThan(
+            300,
+            \Carbon\Carbon::parse($timeline[0]['bucket'])->diffInHours(
+                \Carbon\Carbon::parse($timeline[count($timeline) - 1]['bucket'])
+            )
+        );
+    }
+
     public function test_exception_show_includes_impact(): void
     {
         $entry = $this->createException([

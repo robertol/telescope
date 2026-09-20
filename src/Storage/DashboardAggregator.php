@@ -20,11 +20,16 @@ class DashboardAggregator
     public function dashboard(int $hours): array
     {
         $since = now()->subHours($hours);
-        $requests = $this->requestStats($since, $hours);
+        $requestRows = $this->entryScalars($since, EntryType::REQUEST, [
+            'response_status',
+            'duration',
+            'method',
+            'uri',
+        ]);
 
         return [
             'hours' => $hours,
-            'requests' => $requests,
+            'requests' => $this->requestStatsFromRows($requestRows, $since, $hours),
             'exceptions' => [
                 'total' => $this->table('telescope_entries')
                     ->where('type', EntryType::EXCEPTION)
@@ -33,7 +38,7 @@ class DashboardAggregator
                 'users' => $this->exceptionUsers($since),
             ],
             'jobs' => $this->jobStats($since, $hours),
-            'slow_routes' => $this->slowRoutes($since),
+            'slow_routes' => $this->slowRoutesFromRows($requestRows),
         ];
     }
 
@@ -95,7 +100,7 @@ class DashboardAggregator
             'handled' => $handled,
             'unhandled' => $unhandled,
             'families' => $families->values()->all(),
-            'timeline' => $this->countBuckets($since, $hours, EntryType::EXCEPTION),
+            'timeline' => $this->filledCountBuckets($since, $hours, EntryType::EXCEPTION),
         ];
     }
 
@@ -207,15 +212,10 @@ class DashboardAggregator
     /**
      * @return array<string, mixed>
      */
-    protected function requestStats(DateTimeInterface $since, int $hours): array
+    protected function requestStatsFromRows(Collection $rows, DateTimeInterface $since, int $hours): array
     {
-        $rows = $this->table('telescope_entries')
-            ->where('type', EntryType::REQUEST)
-            ->where('created_at', '>=', $since)
-            ->get(['content', 'created_at']);
-
-        $statuses = $rows->map(fn ($row) => (int) ($this->content($row)['response_status'] ?? 0));
-        $durations = $rows->map(fn ($row) => (int) ($this->content($row)['duration'] ?? 0))->filter()->values()->all();
+        $statuses = $rows->map(fn ($row) => $this->intValue($row, 'response_status'));
+        $durations = $rows->map(fn ($row) => $this->intValue($row, 'duration'))->filter()->values()->all();
 
         return [
             'total' => $rows->count(),
@@ -303,8 +303,8 @@ class DashboardAggregator
 
         return $query
             ->select(DB::raw($bucket.' as bucket'), DB::raw('count(*) as total'))
-            ->groupBy('bucket')
-            ->orderBy('bucket')
+            ->groupByRaw($bucket)
+            ->orderByRaw($bucket)
             ->get()
             ->map(fn ($row) => [
                 'bucket' => (string) $row->bucket,
@@ -314,16 +314,51 @@ class DashboardAggregator
     }
 
     /**
+     * @return array<int, array{bucket: string, total: int}>
+     */
+    protected function filledCountBuckets(DateTimeInterface $since, int $hours, string $type): array
+    {
+        $filled = $this->emptyTimeline($since, $hours, []);
+
+        $rows = $this->table('telescope_entries')
+            ->where('type', $type)
+            ->where('created_at', '>=', $since)
+            ->get(['created_at']);
+
+        foreach ($rows as $row) {
+            $key = $this->bucketKey($row->created_at, $hours);
+
+            if (! isset($filled[$key])) {
+                continue;
+            }
+
+            $filled[$key]['total']++;
+        }
+
+        return array_values(array_map(function (array $point) {
+            unset($point['_durations']);
+
+            return $point;
+        }, $filled));
+    }
+
+    /**
      * @return array{processed: int, pending: int, failed: int, buckets: array<int, array<string, mixed>>}
      */
     protected function jobStats(DateTimeInterface $since, int $hours): array
     {
-        $rows = $this->table('telescope_entries')
+        $count = (int) $this->table('telescope_entries')
             ->where('type', EntryType::JOB)
             ->where('created_at', '>=', $since)
-            ->get(['content', 'created_at']);
+            ->count();
 
-        $statuses = $rows->map(fn ($row) => $this->content($row)['status'] ?? 'pending');
+        if ($count > 5000) {
+            return $this->jobVolumeStats($since, $hours, $count);
+        }
+
+        $rows = $this->entryScalars($since, EntryType::JOB, ['status']);
+
+        $statuses = $rows->map(fn ($row) => $this->stringValue($row, 'status', 'pending'));
         $keys = ['processed', 'pending', 'failed'];
         $filled = $this->emptyTimeline($since, $hours, array_fill_keys($keys, 0));
 
@@ -334,7 +369,7 @@ class DashboardAggregator
                 continue;
             }
 
-            $status = $this->content($row)['status'] ?? 'pending';
+            $status = $this->stringValue($row, 'status', 'pending');
 
             if (! in_array($status, $keys, true)) {
                 $status = 'pending';
@@ -348,6 +383,33 @@ class DashboardAggregator
             'processed' => $statuses->filter(fn ($status) => $status === 'processed')->count(),
             'pending' => $statuses->filter(fn ($status) => $status === 'pending')->count(),
             'failed' => $statuses->filter(fn ($status) => $status === 'failed')->count(),
+            'buckets' => array_values($filled),
+        ];
+    }
+
+    /**
+     * @return array{processed: int, pending: int, failed: int, buckets: array<int, array<string, mixed>>}
+     */
+    protected function jobVolumeStats(DateTimeInterface $since, int $hours, int $count): array
+    {
+        $keys = ['processed', 'pending', 'failed'];
+        $filled = $this->emptyTimeline($since, $hours, array_fill_keys($keys, 0));
+
+        foreach ($this->countBuckets($since, $hours, EntryType::JOB) as $point) {
+            $key = $point['bucket'];
+
+            if (! isset($filled[$key])) {
+                continue;
+            }
+
+            $filled[$key]['processed'] = $point['total'];
+            $filled[$key]['total'] = $point['total'];
+        }
+
+        return [
+            'processed' => $count,
+            'pending' => 0,
+            'failed' => 0,
             'buckets' => array_values($filled),
         ];
     }
@@ -379,15 +441,14 @@ class DashboardAggregator
                 continue;
             }
 
-            $content = $this->content($row);
-            $band = $this->statusBand((int) ($content['response_status'] ?? 0));
+            $band = $this->statusBand($this->intValue($row, 'response_status'));
 
             if ($band !== null) {
                 $filled[$key][$band]++;
             }
 
             $filled[$key]['total']++;
-            $duration = (int) ($content['duration'] ?? 0);
+            $duration = $this->intValue($row, 'duration');
 
             if ($duration > 0) {
                 $filled[$key]['_durations'][] = $duration;
@@ -465,25 +526,20 @@ class DashboardAggregator
     /**
      * @return array<int, array<string, mixed>>
      */
-    protected function slowRoutes(DateTimeInterface $since): array
+    protected function slowRoutesFromRows(Collection $rows): array
     {
-        $rows = $this->table('telescope_entries')
-            ->where('type', EntryType::REQUEST)
-            ->where('created_at', '>=', $since)
-            ->get(['content']);
 
         return $rows
-            ->map(fn ($row) => $this->content($row))
-            ->filter(fn ($content) => (int) ($content['duration'] ?? 0) > 1000)
-            ->groupBy(fn ($content) => ($content['method'] ?? 'GET').' '.($content['uri'] ?? '/'))
+            ->filter(fn ($row) => $this->intValue($row, 'duration') > 1000)
+            ->groupBy(fn ($row) => $this->stringValue($row, 'method', 'GET').' '.$this->stringValue($row, 'uri', '/'))
             ->map(function (Collection $group) {
                 $first = $group->first();
 
                 return [
-                    'method' => $first['method'] ?? 'GET',
-                    'uri' => $first['uri'] ?? '/',
+                    'method' => $this->stringValue($first, 'method', 'GET'),
+                    'uri' => $this->stringValue($first, 'uri', '/'),
                     'count' => $group->count(),
-                    'max_duration' => (int) $group->max('duration'),
+                    'max_duration' => (int) $group->max(fn ($row) => $this->intValue($row, 'duration')),
                 ];
             })
             ->sortByDesc('max_duration')
@@ -503,13 +559,20 @@ class DashboardAggregator
             ->whereNotNull('family_hash')
             ->orderByDesc('created_at')
             ->orderByDesc('sequence')
-            ->get();
+            ->get([
+                'uuid',
+                'sequence',
+                'family_hash',
+                'created_at',
+                DB::raw($this->jsonValue('class').' as class'),
+                DB::raw($this->jsonValue('message').' as message'),
+                DB::raw($this->jsonValue('resolved_at').' as resolved_at'),
+            ]);
 
         return $rows->groupBy('family_hash')->map(function (Collection $group, $hash) {
             $latest = $group->sortByDesc(function ($row) {
                 return Carbon::parse($row->created_at)->timestamp.':'.str_pad((string) $row->sequence, 10, '0', STR_PAD_LEFT);
             })->first();
-            $content = $this->content($latest);
             $uuids = $group->pluck('uuid');
 
             $users = $this->table('telescope_entries_tags')
@@ -518,17 +581,63 @@ class DashboardAggregator
                 ->distinct()
                 ->count('tag');
 
+            $resolvedAt = $this->stringValue($latest, 'resolved_at');
+
             return [
                 'family_hash' => $hash,
                 'latest_id' => $latest->uuid,
-                'class' => $content['class'] ?? null,
-                'message' => $content['message'] ?? null,
+                'class' => $this->stringValue($latest, 'class') ?: null,
+                'message' => $this->stringValue($latest, 'message') ?: null,
                 'count' => $group->count(),
                 'users' => $users,
                 'last_seen' => Carbon::parse($latest->created_at)->toDateTimeString(),
-                'handled' => ! empty($content['resolved_at']),
+                'handled' => $resolvedAt !== '',
             ];
         })->values();
+    }
+
+    /**
+     * @param  array<int, string>  $keys
+     * @return Collection<int, object>
+     */
+    protected function entryScalars(DateTimeInterface $since, string $type, array $keys): Collection
+    {
+        $columns = ['created_at'];
+
+        foreach ($keys as $key) {
+            $columns[] = DB::raw($this->jsonValue($key).' as '.$key);
+        }
+
+        return $this->table('telescope_entries')
+            ->where('type', $type)
+            ->where('created_at', '>=', $since)
+            ->get($columns);
+    }
+
+    protected function intValue(object $row, string $key): int
+    {
+        if (isset($row->{$key}) && $row->{$key} !== '' && $row->{$key} !== null) {
+            return (int) $row->{$key};
+        }
+
+        return (int) ($this->content($row)[$key] ?? 0);
+    }
+
+    protected function stringValue(object $row, string $key, string $default = ''): string
+    {
+        $value = $row->{$key} ?? null;
+
+        if (is_string($value) && $value !== '') {
+            return $value;
+        }
+
+        $fromContent = $this->content($row)[$key] ?? null;
+
+        if (is_string($fromContent) && $fromContent !== '') {
+            return $fromContent;
+        }
+
+        return $default;
     }
 
     /**
@@ -548,13 +657,16 @@ class DashboardAggregator
 
     protected function jsonValue(string $key): string
     {
-        $driver = DB::connection($this->connection)->getDriverName();
-
-        if ($driver === 'pgsql') {
+        if ($this->isPgsql()) {
             return "(content::jsonb)->>'{$key}'";
         }
 
         return "json_extract(content, '$.{$key}')";
+    }
+
+    protected function isPgsql(): bool
+    {
+        return DB::connection($this->connection)->getDriverName() === 'pgsql';
     }
 
     protected function sqlBucket(int $hours): string

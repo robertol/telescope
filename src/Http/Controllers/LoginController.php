@@ -18,6 +18,16 @@ class LoginController extends Controller
     {
         TelescopeUser::ensureDefault();
 
+        $user = Telescope::dashboardUser(request());
+
+        if ($user?->must_change_password) {
+            return redirect()->to($this->passwordUrl());
+        }
+
+        if (TelescopeUser::requiresPasswordChange(request())) {
+            return view('telescope::login');
+        }
+
         if (Telescope::check(request())) {
             return redirect()->to('/'.trim((string) config('telescope.path'), '/'));
         }
@@ -40,7 +50,10 @@ class LoginController extends Controller
             $request->session()->regenerate();
             $request->session()->put('telescope_user_id', $telescopeUser->id);
 
-            return response()->json(['ok' => true]);
+            return response()->json([
+                'ok' => true,
+                'must_change_password' => (bool) $telescopeUser->must_change_password,
+            ]);
         }
 
         foreach ((array) config('telescope.auth.guards', ['web']) as $guard) {
@@ -59,7 +72,10 @@ class LoginController extends Controller
 
             $request->session()->regenerate();
 
-            return response()->json(['ok' => true]);
+            return response()->json([
+                'ok' => true,
+                'must_change_password' => false,
+            ]);
         }
 
         return response()->json([
@@ -79,5 +95,12 @@ class LoginController extends Controller
         $request->session()->regenerateToken();
 
         return response()->json(['ok' => true]);
+    }
+
+    protected function passwordUrl(): string
+    {
+        $path = trim((string) config('telescope.path'), '/');
+
+        return ($path === '' ? '' : '/'.$path).'/password';
     }
 }

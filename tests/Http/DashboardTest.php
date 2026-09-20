@@ -4,6 +4,8 @@ namespace Laravel\Telescope\Tests\Http;
 
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Laravel\Telescope\EntryType;
 use Laravel\Telescope\Http\Middleware\Authorize;
 use Laravel\Telescope\Tests\Console\CreatesTelescopeEntries;
@@ -21,6 +23,28 @@ class DashboardTest extends FeatureTestCase
         parent::setUp();
 
         $this->withoutMiddleware([Authorize::class, VerifyCsrfToken::class, ValidateCsrfToken::class, PreventRequestForgery::class]);
+    }
+
+    public function test_dashboard_defaults_to_the_last_24_hours(): void
+    {
+        Cache::forget('telescope:dashboard:24');
+
+        $this->createRequest([
+            'method' => 'GET',
+            'uri' => '/v1/user',
+            'response_status' => 200,
+            'duration' => 40,
+        ]);
+
+        $response = $this->getJson('/telescope/telescope-api/dashboard')
+            ->assertSuccessful()
+            ->assertJsonPath('hours', 24)
+            ->assertJsonPath('requests.total', 1);
+
+        $buckets = $response->json('requests.buckets');
+
+        $this->assertGreaterThan(20, count($buckets));
+        $this->assertLessThan(30, count($buckets));
     }
 
     public function test_dashboard_summarizes_recent_requests_exceptions_and_jobs(): void
@@ -81,5 +105,43 @@ class DashboardTest extends FeatureTestCase
         $this->assertSame(1, $jobBucket['processed']);
         $this->assertSame(1, $jobBucket['pending']);
         $this->assertSame(1, $jobBucket['failed']);
+    }
+
+    public function test_dashboard_aggregation_does_not_select_raw_entry_content(): void
+    {
+        $this->createRequest([
+            'method' => 'GET',
+            'uri' => '/v1/user',
+            'response_status' => 200,
+            'duration' => 40,
+            'payload' => ['blob' => str_repeat('x', 2000)],
+        ]);
+        $this->createEntry(EntryType::JOB, ['status' => 'processed', 'name' => 'OkJob']);
+
+        Cache::forget('telescope:dashboard:24');
+
+        $sql = [];
+        DB::listen(function ($query) use (&$sql) {
+            $sql[] = $query->sql;
+        });
+
+        $this->getJson('/telescope/telescope-api/dashboard?hours=24')
+            ->assertSuccessful()
+            ->assertJsonPath('requests.total', 1)
+            ->assertJsonPath('jobs.processed', 1);
+
+        $entryQueries = collect($sql)->filter(
+            fn ($query) => str_contains(strtolower($query), 'telescope_entries')
+        );
+
+        $this->assertNotEmpty($entryQueries->all());
+
+        foreach ($entryQueries as $query) {
+            $this->assertDoesNotMatchRegularExpression(
+                '/\bselect\s+(?:[`"\[]?content[`"\]]?\s*,|\*)/i',
+                $query,
+                $query
+            );
+        }
     }
 }

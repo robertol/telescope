@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/login', 'LoginController@show');
 Route::post('/telescope-api/login', 'LoginController@store');
 Route::post('/telescope-api/logout', 'LoginController@destroy');
+Route::get('/password', 'PasswordController@show');
+Route::post('/telescope-api/password', 'PasswordController@update');
 
 Route::get('/telescope-api/accounts', 'AccountController@index');
 Route::post('/telescope-api/accounts', 'AccountController@store');

@@ -8,9 +8,9 @@ export default {
         },
 
         periodHours() {
-            const hours = Number(this.$route.query.hours || 336);
+            const hours = Number(this.$route.query.hours || 24);
 
-            return [1, 24, 168, 336, 720].includes(hours) ? hours : 336;
+            return [1, 24, 168, 336, 720].includes(hours) ? hours : 24;
         },
 
         periodLabel() {
@@ -129,7 +129,9 @@ export default {
                 return '';
             }
 
-            return moment.utc(bucket).format('MMM D, YYYY, HH:mm:ss') + ' UTC';
+            const parsed = moment.utc(bucket, 'YYYY-MM-DD HH:mm:ss', true);
+
+            return (parsed.isValid() ? parsed : moment.utc(bucket)).format('MMM D, YYYY, HH:mm:ss') + ' UTC';
         },
 
         /**

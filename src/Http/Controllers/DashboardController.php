@@ -18,7 +18,7 @@ class DashboardController extends Controller
     {
         $hours = $this->hours($request);
 
-        $payload = Cache::remember('telescope:dashboard:'.$hours, 30, fn () => $this->aggregator->dashboard($hours));
+        $payload = Cache::remember('telescope:dashboard:'.$hours, 60, fn () => $this->aggregator->dashboard($hours));
 
         return response()->json($payload);
     }
@@ -50,7 +50,7 @@ class DashboardController extends Controller
 
     private function hours(Request $request): int
     {
-        $hours = (int) $request->input('hours', 336);
+        $hours = (int) $request->input('hours', 24);
 
         return max(1, min(8760, $hours));
     }

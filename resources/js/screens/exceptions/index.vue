@@ -33,6 +33,16 @@ export default {
         titleCount() {
             return this.families.length;
         },
+
+        firstBucket() {
+            return this.summary.timeline.length ? this.summary.timeline[0].bucket : null;
+        },
+
+        lastBucket() {
+            const timeline = this.summary.timeline;
+
+            return timeline.length ? timeline[timeline.length - 1].bucket : null;
+        },
     },
 
     watch: {
@@ -68,7 +78,15 @@ export default {
 
 <template>
     <div>
-        <bar-chart :points="summary.timeline" color="#ef4444" :height="56"></bar-chart>
+        <div class="nw-shell mb-4">
+            <div class="nw-pane nw-pane-sparkline">
+                <bar-chart :points="summary.timeline" color="#ef4444" :height="72"></bar-chart>
+                <div class="nw-axis">
+                    <span>{{ formatBucketLabel(firstBucket) }}</span>
+                    <span>{{ formatBucketLabel(lastBucket) }}</span>
+                </div>
+            </div>
+        </div>
 
         <div class="d-flex align-items-center justify-content-between mt-4 mb-3">
             <h1 class="nw-page-title mb-0">{{ titleCount }} Exceptions</h1>

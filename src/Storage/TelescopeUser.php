@@ -5,6 +5,7 @@ namespace Laravel\Telescope\Storage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Laravel\Telescope\Telescope;
 
 class TelescopeUser extends Model
 {
@@ -24,6 +25,7 @@ class TelescopeUser extends Model
         'name',
         'email',
         'password',
+        'must_change_password',
     ];
 
     /**
@@ -33,6 +35,15 @@ class TelescopeUser extends Model
      */
     protected $hidden = [
         'password',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'must_change_password' => 'boolean',
     ];
 
     /**
@@ -60,7 +71,44 @@ class TelescopeUser extends Model
             'name' => (string) config('telescope.auth.default.name', 'Telescope'),
             'email' => (string) config('telescope.auth.default.email', 'telescope@local'),
             'password' => (string) config('telescope.auth.default.password', 'telescope'),
+            'must_change_password' => true,
         ]);
+    }
+
+    /**
+     * Whether the given request still needs a first-access password change.
+     */
+    public static function requiresPasswordChange($request): bool
+    {
+        $user = Telescope::dashboardUser($request);
+
+        if ($user) {
+            return (bool) $user->must_change_password;
+        }
+
+        if ($request->user()) {
+            return false;
+        }
+
+        return static::hasPendingPasswordChange();
+    }
+
+    /**
+     * Whether any dashboard user still needs to change the initial password.
+     */
+    public static function hasPendingPasswordChange(): bool
+    {
+        $connection = config('telescope.storage.database.connection');
+
+        if (! Schema::connection($connection)->hasTable('telescope_users')) {
+            return false;
+        }
+
+        if (! Schema::connection($connection)->hasColumn('telescope_users', 'must_change_password')) {
+            return false;
+        }
+
+        return static::query()->where('must_change_password', true)->exists();
     }
 
     /**

@@ -32,6 +32,7 @@ class AccountController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => $validated['password'],
+            'must_change_password' => false,
         ]);
 
         return response()->json([

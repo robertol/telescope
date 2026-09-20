@@ -15,7 +15,7 @@ class ExceptionSummaryController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $hours = max(1, min(8760, (int) $request->input('hours', 336)));
+        $hours = max(1, min(8760, (int) $request->input('hours', 24)));
         $status = $request->input('status');
 
         if (! in_array($status, [null, 'handled', 'unhandled'], true)) {

@@ -20,7 +20,7 @@ class TelescopeUserTest extends FeatureTestCase
         $this->withoutMiddleware([VerifyCsrfToken::class, ValidateCsrfToken::class, PreventRequestForgery::class]);
     }
 
-    public function test_default_telescope_user_can_sign_in_without_a_laravel_user(): void
+    public function test_default_telescope_user_must_change_password_before_using_the_dashboard(): void
     {
         $this->assertSame(0, $this->laravelUsersCount());
         $this->assertTrue(TelescopeUser::query()->where('email', 'telescope@local')->exists());
@@ -28,7 +28,73 @@ class TelescopeUserTest extends FeatureTestCase
         $this->postJson('/telescope/telescope-api/login', [
             'email' => 'telescope@local',
             'password' => 'telescope',
+        ])->assertSuccessful()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('must_change_password', true);
+
+        $this->get('/telescope')->assertRedirect('/telescope/password');
+        $this->get('/telescope/password')->assertSuccessful()->assertSee('Change password', false);
+        $this->getJson('/telescope/telescope-api/dashboard')->assertForbidden();
+    }
+
+    public function test_password_change_rejects_the_current_and_default_password(): void
+    {
+        $this->postJson('/telescope/telescope-api/login', [
+            'email' => 'telescope@local',
+            'password' => 'telescope',
+        ])->assertSuccessful();
+
+        $this->postJson('/telescope/telescope-api/password', [
+            'current_password' => 'telescope',
+            'password' => 'telescope',
+            'password_confirmation' => 'telescope',
+        ])->assertStatus(422);
+
+        $this->assertTrue(
+            (bool) TelescopeUser::query()->where('email', 'telescope@local')->value('must_change_password')
+        );
+    }
+
+    public function test_password_change_on_first_access_unlocks_the_dashboard(): void
+    {
+        $this->postJson('/telescope/telescope-api/login', [
+            'email' => 'telescope@local',
+            'password' => 'telescope',
+        ])->assertSuccessful();
+
+        $this->postJson('/telescope/telescope-api/password', [
+            'current_password' => 'telescope',
+            'password' => 'new-secret-pass',
+            'password_confirmation' => 'new-secret-pass',
         ])->assertSuccessful()->assertJsonPath('ok', true);
+
+        $this->assertFalse(
+            (bool) TelescopeUser::query()->where('email', 'telescope@local')->value('must_change_password')
+        );
+
+        $this->get('/telescope')->assertSuccessful();
+        $this->getJson('/telescope/telescope-api/dashboard')->assertSuccessful();
+    }
+
+    public function test_later_login_does_not_require_another_password_change(): void
+    {
+        $this->postJson('/telescope/telescope-api/login', [
+            'email' => 'telescope@local',
+            'password' => 'telescope',
+        ])->assertSuccessful();
+
+        $this->postJson('/telescope/telescope-api/password', [
+            'current_password' => 'telescope',
+            'password' => 'new-secret-pass',
+            'password_confirmation' => 'new-secret-pass',
+        ])->assertSuccessful();
+
+        $this->postJson('/telescope/telescope-api/logout')->assertSuccessful();
+
+        $this->postJson('/telescope/telescope-api/login', [
+            'email' => 'telescope@local',
+            'password' => 'new-secret-pass',
+        ])->assertSuccessful()->assertJsonPath('must_change_password', false);
 
         $this->get('/telescope')->assertSuccessful();
     }
@@ -116,6 +182,12 @@ class TelescopeUserTest extends FeatureTestCase
         $this->postJson('/telescope/telescope-api/login', [
             'email' => 'telescope@local',
             'password' => 'telescope',
+        ])->assertSuccessful();
+
+        $this->postJson('/telescope/telescope-api/password', [
+            'current_password' => 'telescope',
+            'password' => 'new-secret-pass',
+            'password_confirmation' => 'new-secret-pass',
         ])->assertSuccessful();
     }
 

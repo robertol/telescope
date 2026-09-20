@@ -15,7 +15,7 @@ class OutgoingRequestController extends Controller
 
     public function hosts(Request $request): JsonResponse
     {
-        $hours = max(1, min(8760, (int) $request->input('hours', 336)));
+        $hours = max(1, min(8760, (int) $request->input('hours', 24)));
 
         return response()->json([
             'hosts' => $this->aggregator->outgoingHosts($hours),
@@ -32,7 +32,7 @@ class OutgoingRequestController extends Controller
 
         return response()->json($this->aggregator->outgoingRequests(
             $validated['host'],
-            (int) ($validated['hours'] ?? 336),
+            (int) ($validated['hours'] ?? 24),
             (int) ($validated['take'] ?? 50),
         ));
     }
