@@ -95,8 +95,20 @@ return [
 
     'storage' => [
         'database' => [
-            'connection' => env('DB_CONNECTION', 'mysql'),
+            'connection' => env('TELESCOPE_DB_CONNECTION', 'telescope'),
             'chunk' => 1000,
+            'driver' => env('TELESCOPE_DB_DRIVER'),
+            'url' => env('TELESCOPE_DB_URL'),
+            'host' => env('TELESCOPE_DB_HOST'),
+            'port' => env('TELESCOPE_DB_PORT'),
+            'database' => env('TELESCOPE_DB_DATABASE'),
+            'username' => env('TELESCOPE_DB_USERNAME'),
+            'password' => env('TELESCOPE_DB_PASSWORD'),
+            'unix_socket' => env('TELESCOPE_DB_SOCKET'),
+            'charset' => env('TELESCOPE_DB_CHARSET'),
+            'collation' => env('TELESCOPE_DB_COLLATION'),
+            'sslmode' => env('TELESCOPE_DB_SSL_MODE'),
+            'search_path' => env('TELESCOPE_DB_SEARCH_PATH', 'telescope'),
         ],
     ],
 

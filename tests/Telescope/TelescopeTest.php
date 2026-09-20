@@ -21,6 +21,15 @@ class TelescopeTest extends FeatureTestCase
 {
     private $count = 0;
 
+    public function test_registers_telescope_connection_cloned_from_default_driver()
+    {
+        $connection = $this->app['config']->get('database.connections.telescope');
+
+        $this->assertSame('sqlite', $connection['driver']);
+        $this->assertSame(':memory:', $connection['database']);
+        $this->assertArrayNotHasKey('search_path', $connection);
+    }
+
     /** {@inheritdoc} */
     #[\Override]
     protected function tearDown(): void

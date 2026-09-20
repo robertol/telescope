@@ -11,6 +11,7 @@ use Laravel\Telescope\Contracts\EntriesRepository;
 use Laravel\Telescope\Contracts\PrunableRepository;
 use Laravel\Telescope\Storage\DashboardAggregator;
 use Laravel\Telescope\Storage\DatabaseEntriesRepository;
+use Laravel\Telescope\Storage\TelescopeConnectionFactory;
 
 class TelescopeServiceProvider extends ServiceProvider
 {
@@ -127,7 +128,52 @@ class TelescopeServiceProvider extends ServiceProvider
             __DIR__.'/../config/telescope.php', 'telescope'
         );
 
+        $this->registerTelescopeDatabaseConnection();
         $this->registerStorageDriver();
+    }
+
+    /**
+     * Register a dedicated database connection when the host app omitted one.
+     *
+     * Clones mysql, mariadb, pgsql, sqlite, or sqlsrv. PostgreSQL is isolated
+     * with search_path=telescope; other drivers keep their native options.
+     */
+    protected function registerTelescopeDatabaseConnection(): void
+    {
+        $this->app->booting(function () {
+            $config = $this->app->make('config');
+
+            if (is_array($config->get('database.connections.telescope'))) {
+                return;
+            }
+
+            $storage = $config->get('telescope.storage.database', []);
+            $driver = $storage['driver'] ?? $config->get('database.default', 'sqlite');
+
+            $connection = (new TelescopeConnectionFactory)->make(
+                $config->get('database.connections', []),
+                (string) $driver,
+                [
+                    'url' => $storage['url'] ?? null,
+                    'host' => $storage['host'] ?? null,
+                    'port' => $storage['port'] ?? null,
+                    'database' => $storage['database'] ?? null,
+                    'username' => $storage['username'] ?? null,
+                    'password' => $storage['password'] ?? null,
+                    'unix_socket' => $storage['unix_socket'] ?? null,
+                    'charset' => $storage['charset'] ?? null,
+                    'collation' => $storage['collation'] ?? null,
+                    'sslmode' => $storage['sslmode'] ?? null,
+                ],
+                (string) ($storage['search_path'] ?? 'telescope')
+            );
+
+            if ($connection === null) {
+                return;
+            }
+
+            $config->set('database.connections.telescope', $connection);
+        });
     }
 
     /**
