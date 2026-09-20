@@ -102,6 +102,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Observability Storage
+    |--------------------------------------------------------------------------
+    |
+    | Specialized tables sit beside telescope_entries. Keep legacy writes on
+    | until dual-write is validated. Metric rollups (request_metrics_1m, etc.)
+    | are intentionally not created in this phase.
+    |
+    */
+
+    'observability' => [
+        'storage_enabled' => env('OBSERVABILITY_STORAGE_ENABLED', false),
+        'legacy_storage' => env('OBSERVABILITY_TELESCOPE_LEGACY_STORAGE', true),
+        'chunk' => 1000,
+        'prune_chunk' => 5000,
+        'retention' => [
+            'request' => env('OBSERVABILITY_REQUEST_RETENTION_DAYS', 30),
+            'query' => env('OBSERVABILITY_QUERY_RETENTION_DAYS', 7),
+            'exception' => env('OBSERVABILITY_EXCEPTION_RETENTION_DAYS', 90),
+            'job' => env('OBSERVABILITY_JOB_RETENTION_DAYS', 14),
+            'http_client' => env('OBSERVABILITY_HTTP_CLIENT_RETENTION_DAYS', 14),
+            'cache' => env('OBSERVABILITY_CACHE_RETENTION_DAYS', 3),
+            'log' => env('OBSERVABILITY_LOG_RETENTION_DAYS', 7),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Telescope Queue
     |--------------------------------------------------------------------------
     |

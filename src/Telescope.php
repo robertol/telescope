@@ -16,6 +16,7 @@ use Illuminate\Support\Testing\Fakes\EventFake;
 use Laravel\Telescope\Contracts\EntriesRepository;
 use Laravel\Telescope\Contracts\TerminableRepository;
 use Laravel\Telescope\Jobs\ProcessPendingUpdates;
+use Laravel\Telescope\Observability\ObservabilityTraceContext;
 use RuntimeException;
 use Throwable;
 
@@ -271,6 +272,10 @@ class Telescope
         }
 
         static::$shouldRecord = ! $recordingPaused;
+
+        if (static::$shouldRecord && config('telescope.observability.storage_enabled')) {
+            app(ObservabilityTraceContext::class)->start();
+        }
     }
 
     /**
@@ -281,6 +286,8 @@ class Telescope
     public static function stopRecording()
     {
         static::$shouldRecord = false;
+
+        static::resetObservabilityTrace();
     }
 
     /**
@@ -362,6 +369,8 @@ class Telescope
         $entry->type($type)->tags(Arr::collapse(array_map(function ($tagCallback) use ($entry) {
             return $tagCallback($entry);
         }, static::$tagUsing)));
+
+        static::assignObservabilityTrace($entry, $type);
 
         static::withoutRecording(function () use ($entry) {
             if (collect(static::$filterUsing)->every->__invoke($entry)) {
@@ -594,7 +603,35 @@ class Telescope
     {
         static::$entriesQueue = [];
 
+        static::resetObservabilityTrace();
+
         return new static;
+    }
+
+    /**
+     * Attach request-scoped trace identifiers to an incoming entry.
+     */
+    protected static function assignObservabilityTrace(IncomingEntry $entry, string $type): void
+    {
+        if (! config('telescope.observability.storage_enabled')) {
+            return;
+        }
+
+        $span = app(ObservabilityTraceContext::class)->spanFor($type);
+
+        $entry->withTrace($span['trace_id'], $span['span_id'], $span['parent_span_id']);
+    }
+
+    /**
+     * Forget observability trace state so Octane workers cannot leak it.
+     */
+    protected static function resetObservabilityTrace(): void
+    {
+        if (! function_exists('app') || ! app()->bound(ObservabilityTraceContext::class)) {
+            return;
+        }
+
+        app(ObservabilityTraceContext::class)->reset();
     }
 
     /**

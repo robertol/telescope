@@ -9,6 +9,18 @@ use Laravel\Telescope\Actions\UninstallAction;
 use Laravel\Telescope\Contracts\ClearableRepository;
 use Laravel\Telescope\Contracts\EntriesRepository;
 use Laravel\Telescope\Contracts\PrunableRepository;
+use Laravel\Telescope\Observability\Console\PruneCommand as ObservabilityPruneCommand;
+use Laravel\Telescope\Observability\Contracts\ObservabilityTransport;
+use Laravel\Telescope\Observability\ExceptionFingerprint;
+use Laravel\Telescope\Observability\ObservabilityCollector;
+use Laravel\Telescope\Observability\ObservabilityNormalizer;
+use Laravel\Telescope\Observability\ObservabilitySanitizer;
+use Laravel\Telescope\Observability\ObservabilityTraceContext;
+use Laravel\Telescope\Observability\QueryFingerprint;
+use Laravel\Telescope\Observability\Storage\ObservabilityEntriesRepository;
+use Laravel\Telescope\Observability\Storage\ObservabilityEntryQuery;
+use Laravel\Telescope\Observability\Storage\ObservabilityPruner;
+use Laravel\Telescope\Observability\Transport\PostgresTransport;
 use Laravel\Telescope\Storage\DashboardAggregator;
 use Laravel\Telescope\Storage\DatabaseEntriesRepository;
 
@@ -112,6 +124,7 @@ class TelescopeServiceProvider extends ServiceProvider
                 Console\PublishCommand::class,
                 Console\ResumeCommand::class,
                 Console\ShowCommand::class,
+                ObservabilityPruneCommand::class,
             ]);
         }
     }
@@ -151,16 +164,56 @@ class TelescopeServiceProvider extends ServiceProvider
      */
     protected function registerDatabaseDriver()
     {
+        $this->app->singleton(DatabaseEntriesRepository::class, function ($app) {
+            return new DatabaseEntriesRepository(
+                $app['config']->get('telescope.storage.database.connection'),
+                $app['config']->get('telescope.storage.database.chunk')
+            );
+        });
+
+        $this->app->singleton(ObservabilityTraceContext::class);
+        $this->app->singleton(QueryFingerprint::class);
+        $this->app->singleton(ExceptionFingerprint::class);
+        $this->app->singleton(ObservabilitySanitizer::class);
+        $this->app->singleton(ObservabilityNormalizer::class);
+
+        $this->app->singleton(ObservabilityTransport::class, function ($app) {
+            return new PostgresTransport(
+                $app['config']->get('telescope.storage.database.connection'),
+                (int) $app['config']->get(
+                    'telescope.observability.chunk',
+                    $app['config']->get('telescope.storage.database.chunk', 1000)
+                )
+            );
+        });
+
+        $this->app->singleton(ObservabilityCollector::class);
+        $this->app->singleton(ObservabilityEntryQuery::class, function ($app) {
+            return new ObservabilityEntryQuery(
+                $app['config']->get('telescope.storage.database.connection')
+            );
+        });
+        $this->app->singleton(ObservabilityPruner::class, function ($app) {
+            return new ObservabilityPruner(
+                $app['config']->get('telescope.storage.database.connection')
+            );
+        });
+
+        $this->app->singleton(EntriesRepository::class, function ($app) {
+            return new ObservabilityEntriesRepository(
+                $app->make(DatabaseEntriesRepository::class),
+                $app->make(ObservabilityCollector::class),
+            );
+        });
+
         $this->app->singleton(
-            EntriesRepository::class, DatabaseEntriesRepository::class
+            ClearableRepository::class,
+            fn ($app) => $app->make(EntriesRepository::class)
         );
 
         $this->app->singleton(
-            ClearableRepository::class, DatabaseEntriesRepository::class
-        );
-
-        $this->app->singleton(
-            PrunableRepository::class, DatabaseEntriesRepository::class
+            PrunableRepository::class,
+            fn ($app) => $app->make(EntriesRepository::class)
         );
 
         $this->app->when(DatabaseEntriesRepository::class)

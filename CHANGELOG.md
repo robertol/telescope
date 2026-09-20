@@ -2,6 +2,7 @@
 
 ## [Unreleased](https://github.com/laravel/telescope/compare/v5.23.0...5.x)
 
+* Dual-write observability tables (`observability_*`) sit beside `telescope_entries`, with sanitization, request-scoped traces, keyset pagination, and batched retention.
 * The Exceptions sparkline sits in a Nightwatch-style card with axis labels.
 * Dashboard and exception charts default to the last 24 hours.
 * Dashboard users created by the default installer must change their password on first access before using Telescope.

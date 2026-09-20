@@ -41,6 +41,20 @@ class RequestWatchersTest extends FeatureTestCase
         $this->assertSame('GET', $entry->content['method']);
         $this->assertSame(200, $entry->content['response_status']);
         $this->assertSame('/emails', $entry->content['uri']);
+        $this->assertNull($entry->content['route']);
+    }
+
+    public function test_request_watcher_records_the_route_name(): void
+    {
+        Route::get('/named-emails', function () {
+            return ['ok' => true];
+        })->name('emails.index');
+
+        $this->get('/named-emails')->assertSuccessful();
+
+        $entry = $this->loadTelescopeEntries()->first();
+
+        $this->assertSame('emails.index', $entry->content['route']);
     }
 
     public function test_request_watcher_registers_404()

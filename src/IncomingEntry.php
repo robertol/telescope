@@ -43,6 +43,27 @@ class IncomingEntry
     public $user;
 
     /**
+     * The observability trace identifier.
+     *
+     * @var string|null
+     */
+    public $traceId;
+
+    /**
+     * The observability span identifier.
+     *
+     * @var string|null
+     */
+    public $spanId;
+
+    /**
+     * The parent observability span identifier.
+     *
+     * @var string|null
+     */
+    public $parentSpanId;
+
+    /**
      * The entry's content.
      *
      * @var array
@@ -127,6 +148,23 @@ class IncomingEntry
     public function withFamilyHash($familyHash)
     {
         $this->familyHash = $familyHash;
+
+        return $this;
+    }
+
+    /**
+     * Assign observability trace identifiers without mutating stored content.
+     *
+     * @param  string  $traceId
+     * @param  string  $spanId
+     * @param  string|null  $parentSpanId
+     * @return $this
+     */
+    public function withTrace(string $traceId, string $spanId, ?string $parentSpanId)
+    {
+        $this->traceId = $traceId;
+        $this->spanId = $spanId;
+        $this->parentSpanId = $parentSpanId;
 
         return $this;
     }

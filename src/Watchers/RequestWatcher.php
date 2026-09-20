@@ -50,6 +50,7 @@ class RequestWatcher extends Watcher
             'ip_address' => $event->request->ip(),
             'uri' => $uri,
             'method' => $event->request->method(),
+            'route' => optional($event->request->route())->getName(),
             'controller_action' => optional($event->request->route())->getActionName(),
             'middleware' => array_values(optional($event->request->route())->gatherMiddleware() ?? []),
             'headers' => $this->headers($event->request->headers->all()),
