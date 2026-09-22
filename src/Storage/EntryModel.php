@@ -69,6 +69,7 @@ class EntryModel extends Model
                 ->whereTag($query, $options)
                 ->whereEndpoint($query, $options)
                 ->whereMinDuration($query, $options)
+                ->whereIp($query, $options)
                 ->whereFamilyHash($query, $options)
                 ->whereBeforeSequence($query, $options)
                 ->filter($query, $options);
@@ -191,7 +192,7 @@ class EntryModel extends Model
      */
     protected function whereContentAttribute($query, string $attribute, string $operator, string $value): void
     {
-        if (! in_array($attribute, ['method', 'uri'], true)) {
+        if (! in_array($attribute, ['method', 'uri', 'ip_address'], true)) {
             throw new \InvalidArgumentException("Unsupported Telescope content attribute [{$attribute}].");
         }
 
@@ -219,6 +220,22 @@ class EntryModel extends Model
             }
 
             return $query->whereRaw("cast(json_extract(content, '$.duration') as real) > ?", [$minDuration]);
+        });
+
+        return $this;
+    }
+
+    /**
+     * Scope the query to request entries from the given client IP.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  \Laravel\Telescope\Storage\EntryQueryOptions  $options
+     * @return $this
+     */
+    protected function whereIp($query, EntryQueryOptions $options)
+    {
+        $query->when($options->ip, function ($query, $ip) {
+            $this->whereContentAttribute($query, 'ip_address', '=', $ip);
         });
 
         return $this;
@@ -265,7 +282,7 @@ class EntryModel extends Model
      */
     protected function filter($query, EntryQueryOptions $options)
     {
-        if ($options->familyHash || $options->tag || $options->batchId || $options->endpoint || $options->minDuration) {
+        if ($options->familyHash || $options->tag || $options->batchId || $options->endpoint || $options->minDuration || $options->ip) {
             return $this;
         }
 

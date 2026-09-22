@@ -63,6 +63,13 @@ class EntryQueryOptions
     public $minDuration;
 
     /**
+     * The client IP address that retrieved request entries must match.
+     *
+     * @var string|null
+     */
+    public $ip;
+
+    /**
      * Create new entry query options from the incoming request.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -78,6 +85,7 @@ class EntryQueryOptions
                 ->endpoint($request->endpoint)
                 ->familyHash($request->family_hash)
                 ->minDuration($request->integer('min_duration') ?: null)
+                ->ip(is_string($request->input('ip')) ? $request->input('ip') : null)
                 ->limit($request->take ?? 50);
     }
 
@@ -181,6 +189,25 @@ class EntryQueryOptions
     public function minDuration(?int $minDuration)
     {
         $this->minDuration = $minDuration && $minDuration > 0 ? $minDuration : null;
+
+        return $this;
+    }
+
+    /**
+     * Set the client IP address filter.
+     *
+     * Invalid or empty values are ignored so the list is not filtered.
+     *
+     * @param  string|null  $ip
+     * @return $this
+     */
+    public function ip(?string $ip)
+    {
+        $ip = is_string($ip) ? trim($ip) : '';
+
+        $this->ip = $ip !== '' && filter_var($ip, FILTER_VALIDATE_IP) !== false
+            ? $ip
+            : null;
 
         return $this;
     }

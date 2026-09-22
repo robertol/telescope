@@ -16,6 +16,7 @@ export default {
             endpoint: '',
             familyHash: '',
             minDuration: '',
+            ip: '',
             entries: [],
             ready: false,
             requestController: new AbortController(),
@@ -63,6 +64,7 @@ export default {
                 : this.$route.query.endpoint || '';
 
         this.minDuration = this.$route.query.min_duration || '';
+        this.ip = this.resource === 'requests' ? (this.$route.query.ip || '') : '';
 
         this.loadEntries((entries) => {
             this.entries = entries;
@@ -114,6 +116,7 @@ export default {
                     : this.$route.query.endpoint || '';
 
             this.minDuration = this.$route.query.min_duration || '';
+            this.ip = this.resource === 'requests' ? (this.$route.query.ip || '') : '';
 
             this.ready = false;
 
@@ -134,12 +137,9 @@ export default {
             const {signal} = this.requestController;
 
             return axios.post(Telescope.basePath + '/telescope-api/' + this.resource +
-                    '?tag=' + encodeURIComponent(this.tag) +
-                    '&endpoint=' + encodeURIComponent(this.endpoint) +
-                    '&min_duration=' + encodeURIComponent(this.minDuration) +
+                    this.entriesQuery() +
                     '&before=' + this.pageBefore +
-                    '&take=' + this.entriesPerRequest +
-                    '&family_hash=' + encodeURIComponent(this.familyHash),
+                    '&take=' + this.entriesPerRequest,
                     null, {signal}
             ).then(response => {
                 if (signal.aborted) return;
@@ -184,11 +184,8 @@ export default {
 
             this.newEntriesTimeout = setTimeout(() => {
                 axios.post(Telescope.basePath + '/telescope-api/' + this.resource +
-                        '?tag=' + encodeURIComponent(this.tag) +
-                        '&endpoint=' + encodeURIComponent(this.endpoint) +
-                        '&min_duration=' + encodeURIComponent(this.minDuration) +
-                        '&take=1' +
-                        '&family_hash=' + encodeURIComponent(this.familyHash),
+                        this.entriesQuery() +
+                        '&take=1',
                         null, {signal}
                 ).then(response => {
                     if (!signal.aborted) {
@@ -224,6 +221,24 @@ export default {
 
                 this.updateTimeAgo();
             }, 60000)
+        },
+
+
+        /**
+         * Shared list filters for this resource.
+         */
+        entriesQuery(){
+            let query =
+                '?tag=' + encodeURIComponent(this.tag) +
+                '&endpoint=' + encodeURIComponent(this.endpoint) +
+                '&min_duration=' + encodeURIComponent(this.minDuration) +
+                '&family_hash=' + encodeURIComponent(this.familyHash);
+
+            if (this.resource === 'requests') {
+                query += '&ip=' + encodeURIComponent(this.ip);
+            }
+
+            return query;
         },
 
 
