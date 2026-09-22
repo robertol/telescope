@@ -86,37 +86,6 @@ class DashboardAggregator
     }
 
     /**
-     * Distinct request endpoints accessed by a client IP.
-     *
-     * @return array<int, array{method: string, uri: string, count: int}>
-     */
-    public function requestEndpointsByIp(string $ip): array
-    {
-        $method = $this->jsonValue('method');
-        $uri = $this->jsonValue('uri');
-        $ipAddress = $this->jsonValue('ip_address');
-
-        $rows = $this->table('telescope_entries')
-            ->where('type', EntryType::REQUEST)
-            ->whereRaw("{$ipAddress} = ?", [$ip])
-            ->groupBy(DB::raw($method), DB::raw($uri))
-            ->orderByDesc(DB::raw('count(*)'))
-            ->orderBy(DB::raw($method))
-            ->orderBy(DB::raw($uri))
-            ->get([
-                DB::raw("{$method} as method"),
-                DB::raw("{$uri} as uri"),
-                DB::raw('count(*) as count'),
-            ]);
-
-        return $rows->map(fn ($row) => [
-            'method' => (string) $row->method,
-            'uri' => (string) $row->uri,
-            'count' => (int) $row->count,
-        ])->all();
-    }
-
-    /**
      * @return array<string, mixed>
      */
     public function exceptionSummary(int $hours, ?string $status = null): array

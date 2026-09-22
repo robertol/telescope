@@ -3,6 +3,7 @@
 namespace Laravel\Telescope\Tests\Watchers;
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
@@ -41,6 +42,27 @@ class RequestWatchersTest extends FeatureTestCase
         $this->assertSame('GET', $entry->content['method']);
         $this->assertSame(200, $entry->content['response_status']);
         $this->assertSame('/emails', $entry->content['uri']);
+    }
+
+    public function test_request_watcher_tags_the_client_ip()
+    {
+        Route::get('/emails', function () {
+            return ['email' => 'themsaid@laravel.com'];
+        });
+
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.10'])
+            ->get('/emails')
+            ->assertSuccessful();
+
+        $entry = $this->loadTelescopeEntries()->first();
+        $tags = DB::table('telescope_entries_tags')
+            ->where('entry_uuid', $entry->uuid)
+            ->pluck('tag')
+            ->all();
+
+        $this->assertSame('203.0.113.10', $entry->content['ip_address']);
+        $this->assertContains('IP:203.0.113.10', $tags);
+        $this->assertContains('GET:/emails', $tags);
     }
 
     public function test_request_watcher_registers_404()

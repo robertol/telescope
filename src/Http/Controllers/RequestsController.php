@@ -2,10 +2,7 @@
 
 namespace Laravel\Telescope\Http\Controllers;
 
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Laravel\Telescope\EntryType;
-use Laravel\Telescope\Storage\DashboardAggregator;
 use Laravel\Telescope\Watchers\RequestWatcher;
 
 class RequestsController extends EntryController
@@ -28,19 +25,5 @@ class RequestsController extends EntryController
     protected function watcher()
     {
         return RequestWatcher::class;
-    }
-
-    /**
-     * Distinct endpoints accessed by a client IP.
-     */
-    public function endpoints(Request $request, DashboardAggregator $aggregator): JsonResponse
-    {
-        $validated = $request->validate([
-            'ip' => ['required', 'ip'],
-        ]);
-
-        return response()->json([
-            'endpoints' => $aggregator->requestEndpointsByIp($validated['ip']),
-        ]);
     }
 }

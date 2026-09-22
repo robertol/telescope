@@ -690,6 +690,8 @@ button:hover {
 .nw-shell-action {
     display: inline-flex;
     align-items: center;
+    flex-shrink: 0;
+    white-space: nowrap;
     font-size: 0.78rem;
     padding: 0.28rem 0.85rem;
     border-radius: 999px;
@@ -740,6 +742,12 @@ button:hover {
     justify-content: space-between;
     gap: 1.25rem;
     margin-bottom: 1rem;
+}
+
+.nw-pane-head-aside {
+    display: flex;
+    align-items: flex-start;
+    flex-shrink: 0;
 }
 
 .nw-kicker {

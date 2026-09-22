@@ -36,7 +36,7 @@ export default {
                 <div v-if="metric != null && metric !== ''" class="nw-metric">{{ metric }}</div>
                 <slot name="copy"></slot>
             </div>
-            <div class="d-flex align-items-start">
+            <div class="nw-pane-head-aside">
                 <slot name="action"></slot>
                 <chart-legend
                     v-if="series && series.length"
