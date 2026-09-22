@@ -56,6 +56,13 @@ class EntryQueryOptions
     public $limit = 50;
 
     /**
+     * Minimum request duration in milliseconds (exclusive).
+     *
+     * @var int|null
+     */
+    public $minDuration;
+
+    /**
      * Create new entry query options from the incoming request.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -70,6 +77,7 @@ class EntryQueryOptions
                 ->tag($request->tag)
                 ->endpoint($request->endpoint)
                 ->familyHash($request->family_hash)
+                ->minDuration($request->integer('min_duration') ?: null)
                 ->limit($request->take ?? 50);
     }
 
@@ -158,6 +166,21 @@ class EntryQueryOptions
     public function familyHash(?string $familyHash)
     {
         $this->familyHash = $familyHash;
+
+        return $this;
+    }
+
+    /**
+     * Set the minimum duration filter in milliseconds.
+     *
+     * Entries strictly above this value are returned.
+     *
+     * @param  int|null  $minDuration
+     * @return $this
+     */
+    public function minDuration(?int $minDuration)
+    {
+        $this->minDuration = $minDuration && $minDuration > 0 ? $minDuration : null;
 
         return $this;
     }

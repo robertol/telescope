@@ -68,6 +68,7 @@ class EntryModel extends Model
                 ->whereBatchId($query, $options)
                 ->whereTag($query, $options)
                 ->whereEndpoint($query, $options)
+                ->whereMinDuration($query, $options)
                 ->whereFamilyHash($query, $options)
                 ->whereBeforeSequence($query, $options)
                 ->filter($query, $options);
@@ -204,6 +205,26 @@ class EntryModel extends Model
     }
 
     /**
+     * Scope the query to entries slower than the given duration in milliseconds.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  \Laravel\Telescope\Storage\EntryQueryOptions  $options
+     * @return $this
+     */
+    protected function whereMinDuration($query, EntryQueryOptions $options)
+    {
+        $query->when($options->minDuration, function ($query, $minDuration) {
+            if ($query->getConnection()->getDriverName() === 'pgsql') {
+                return $query->whereRaw("((content::jsonb)->>'duration')::numeric > ?", [$minDuration]);
+            }
+
+            return $query->whereRaw("cast(json_extract(content, '$.duration') as real) > ?", [$minDuration]);
+        });
+
+        return $this;
+    }
+
+    /**
      * Scope the query for the given type.
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
@@ -244,7 +265,7 @@ class EntryModel extends Model
      */
     protected function filter($query, EntryQueryOptions $options)
     {
-        if ($options->familyHash || $options->tag || $options->batchId || $options->endpoint) {
+        if ($options->familyHash || $options->tag || $options->batchId || $options->endpoint || $options->minDuration) {
             return $this;
         }
 

@@ -10,6 +10,8 @@ use Laravel\Telescope\EntryType;
 
 class DashboardAggregator
 {
+    public const SLOW_ROUTE_THRESHOLD_MS = 1000;
+
     public function __construct(protected string $connection)
     {
     }
@@ -26,6 +28,7 @@ class DashboardAggregator
             'method',
             'uri',
         ]);
+        $slowRoutes = $this->slowRoutesFromRows($requestRows);
 
         return [
             'hours' => $hours,
@@ -36,9 +39,12 @@ class DashboardAggregator
                     ->where('created_at', '>=', $since)
                     ->count(),
                 'users' => $this->exceptionUsers($since),
+                'timeline' => $this->filledCountBuckets($since, $hours, EntryType::EXCEPTION),
             ],
             'jobs' => $this->jobStats($since, $hours),
-            'slow_routes' => $this->slowRoutesFromRows($requestRows),
+            'slow_routes' => $slowRoutes['items'],
+            'slow_routes_total' => $slowRoutes['total'],
+            'slow_route_threshold_ms' => self::SLOW_ROUTE_THRESHOLD_MS,
         ];
     }
 
@@ -265,24 +271,24 @@ class DashboardAggregator
     }
 
     /**
-     * @return array<int, array{bucket: string, total: int}>
+     * @return array{type: string, hours: int, total: int, timeline: array<int, array<string, mixed>>}
      */
-    protected function requestBuckets(DateTimeInterface $since, int $hours): array
+    public function resourceSummary(string $type, int $hours): array
     {
-        return $this->countBuckets($since, $hours, EntryType::REQUEST);
-    }
+        $since = now()->subHours($hours);
+        $timeline = $this->filledCountBuckets($since, $hours, $type);
+        $total = 0;
 
-    /**
-     * @param  array<int, string>  $uuids
-     * @return array<int, array{bucket: string, total: int}>
-     */
-    protected function outgoingBuckets(DateTimeInterface $since, int $hours, array $uuids): array
-    {
-        if ($uuids === []) {
-            return [];
+        foreach ($timeline as $point) {
+            $total += (int) $point['total'];
         }
 
-        return $this->countBuckets($since, $hours, EntryType::CLIENT_REQUEST, $uuids);
+        return [
+            'type' => $type,
+            'hours' => $hours,
+            'total' => $total,
+            'timeline' => $timeline,
+        ];
     }
 
     /**
@@ -320,19 +326,14 @@ class DashboardAggregator
     {
         $filled = $this->emptyTimeline($since, $hours, []);
 
-        $rows = $this->table('telescope_entries')
-            ->where('type', $type)
-            ->where('created_at', '>=', $since)
-            ->get(['created_at']);
-
-        foreach ($rows as $row) {
-            $key = $this->bucketKey($row->created_at, $hours);
+        foreach ($this->countBuckets($since, $hours, $type) as $point) {
+            $key = $this->bucketKey($point['bucket'], $hours);
 
             if (! isset($filled[$key])) {
                 continue;
             }
 
-            $filled[$key]['total']++;
+            $filled[$key]['total'] = (int) $point['total'];
         }
 
         return array_values(array_map(function (array $point) {
@@ -524,13 +525,12 @@ class DashboardAggregator
     }
 
     /**
-     * @return array<int, array<string, mixed>>
+     * @return array{items: array<int, array<string, mixed>>, total: int}
      */
     protected function slowRoutesFromRows(Collection $rows): array
     {
-
-        return $rows
-            ->filter(fn ($row) => $this->intValue($row, 'duration') > 1000)
+        $routes = $rows
+            ->filter(fn ($row) => $this->intValue($row, 'duration') > self::SLOW_ROUTE_THRESHOLD_MS)
             ->groupBy(fn ($row) => $this->stringValue($row, 'method', 'GET').' '.$this->stringValue($row, 'uri', '/'))
             ->map(function (Collection $group) {
                 $first = $group->first();
@@ -543,9 +543,12 @@ class DashboardAggregator
                 ];
             })
             ->sortByDesc('max_duration')
-            ->take(4)
-            ->values()
-            ->all();
+            ->values();
+
+        return [
+            'items' => $routes->take(4)->values()->all(),
+            'total' => $routes->count(),
+        ];
     }
 
     /**

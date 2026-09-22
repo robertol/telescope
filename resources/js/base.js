@@ -124,14 +124,28 @@ export default {
             return n.toLocaleString();
         },
 
-        formatBucketLabel(bucket) {
+        formatBucketLabel(bucket, hours) {
             if (!bucket) {
                 return '';
             }
 
             const parsed = moment.utc(bucket, 'YYYY-MM-DD HH:mm:ss', true);
+            const time = parsed.isValid() ? parsed : moment.utc(bucket);
+            const period = hours ?? this.periodHours;
 
-            return (parsed.isValid() ? parsed : moment.utc(bucket)).format('MMM D, YYYY, HH:mm:ss') + ' UTC';
+            if (Number(period) === 1) {
+                return time.format('HH:mm') + ' UTC';
+            }
+
+            return time.format('MMM D, HH:mm') + ' UTC';
+        },
+
+        formatChartValue(value, format) {
+            if (format === 'duration') {
+                return this.formatDuration(value);
+            }
+
+            return this.formatCount(value);
         },
 
         /**

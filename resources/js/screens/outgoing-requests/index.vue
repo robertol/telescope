@@ -1,9 +1,12 @@
 <script type="text/ecmascript-6">
 import axios from 'axios';
 import PeriodSelector from '../../components/PeriodSelector.vue';
+import AutoRefresh from '../../mixins/autoRefresh';
 
 export default {
     components: { PeriodSelector },
+
+    mixins: [AutoRefresh],
 
     data() {
         return {
@@ -25,12 +28,20 @@ export default {
 
     methods: {
         load() {
-            axios
+            return axios
                 .get(Telescope.basePath + '/telescope-api/outgoing-requests/hosts', {
                     params: { hours: this.periodHours },
+                    signal: this.autoRefreshSignal(),
                 })
                 .then((response) => {
                     this.hosts = response.data.hosts || [];
+                    this.ready = true;
+                })
+                .catch((error) => {
+                    if (error.code === 'ERR_CANCELED') {
+                        return;
+                    }
+
                     this.ready = true;
                 });
         },

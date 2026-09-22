@@ -2,29 +2,27 @@
 import axios from 'axios';
 import BarChart from '../../components/BarChart.vue';
 import LineChart from '../../components/LineChart.vue';
+import ChartPane from '../../components/ChartPane.vue';
 import PeriodSelector from '../../components/PeriodSelector.vue';
+import AutoRefresh from '../../mixins/autoRefresh';
+import { STATUS_SERIES, DURATION_SERIES, JOB_SERIES, RESOURCE_COLORS, CHART_HEIGHT } from '../../charts/series';
 
 export default {
-    components: { BarChart, LineChart, PeriodSelector },
+    components: { BarChart, LineChart, ChartPane, PeriodSelector },
+
+    mixins: [AutoRefresh],
 
     data() {
         return {
             dashboard: null,
             ready: false,
-            statusSeries: [
-                { key: '123xx', color: '#8b93a7', label: '1/2/3XX' },
-                { key: '4xx', color: '#e8a54b', label: '4XX' },
-                { key: '5xx', color: '#e85d6c', label: '5XX' },
-            ],
-            durationSeries: [
-                { key: 'avg', color: '#9aa3af', label: 'AVG' },
-                { key: 'p95', color: '#e8a54b', label: 'P95' },
-            ],
-            jobSeries: [
-                { key: 'processed', color: '#8b7cf7', label: 'PROCESSED' },
-                { key: 'pending', color: '#e8a54b', label: 'RELEASED' },
-                { key: 'failed', color: '#e85d6c', label: 'FAILED' },
-            ],
+            statusSeries: STATUS_SERIES,
+            durationSeries: DURATION_SERIES,
+            jobSeries: JOB_SERIES,
+            exceptionColor: RESOURCE_COLORS.exception,
+            dashboardHeight: CHART_HEIGHT.dashboard,
+            paneHeight: CHART_HEIGHT.pane,
+            sparklineHeight: CHART_HEIGHT.sparkline,
         };
     },
 
@@ -35,6 +33,10 @@ export default {
 
         jobBuckets() {
             return this.dashboard ? this.dashboard.jobs.buckets : [];
+        },
+
+        exceptionBuckets() {
+            return this.dashboard && this.dashboard.exceptions.timeline ? this.dashboard.exceptions.timeline : [];
         },
 
         firstBucket() {
@@ -52,6 +54,58 @@ export default {
         jobLastBucket() {
             return this.jobBuckets.length ? this.jobBuckets[this.jobBuckets.length - 1].bucket : null;
         },
+
+        exceptionFirstBucket() {
+            return this.exceptionBuckets.length ? this.exceptionBuckets[0].bucket : null;
+        },
+
+        exceptionLastBucket() {
+            return this.exceptionBuckets.length ? this.exceptionBuckets[this.exceptionBuckets.length - 1].bucket : null;
+        },
+
+        jobTotals() {
+            if (!this.dashboard) {
+                return {};
+            }
+
+            return {
+                processed: this.dashboard.jobs.processed,
+                pending: this.dashboard.jobs.pending,
+                failed: this.dashboard.jobs.failed,
+            };
+        },
+
+        durationRange() {
+            if (!this.dashboard) {
+                return '';
+            }
+
+            return (
+                this.formatDuration(this.dashboard.requests.duration.min) +
+                ' – ' +
+                this.formatDuration(this.dashboard.requests.duration.max)
+            );
+        },
+
+        slowRoutesTotal() {
+            if (!this.dashboard) {
+                return 0;
+            }
+
+            return Number(this.dashboard.slow_routes_total || this.dashboard.slow_routes.length || 0);
+        },
+
+        slowRoutesLink() {
+            return {
+                path: '/requests',
+                query: {
+                    min_duration: this.dashboard && this.dashboard.slow_route_threshold_ms
+                        ? this.dashboard.slow_route_threshold_ms
+                        : 1000,
+                    hours: this.periodHours,
+                },
+            };
+        },
     },
 
     watch: {
@@ -66,16 +120,33 @@ export default {
     },
 
     methods: {
-        load() {
-            this.ready = false;
+        load(options) {
+            const silent = Boolean(options && options.silent);
 
-            axios
-                .get(Telescope.basePath + '/telescope-api/dashboard', { params: { hours: this.periodHours } })
+            if (!silent) {
+                this.ready = false;
+            }
+
+            const params = { hours: this.periodHours };
+
+            if (silent) {
+                params.fresh = 1;
+            }
+
+            return axios
+                .get(Telescope.basePath + '/telescope-api/dashboard', {
+                    params,
+                    signal: this.autoRefreshSignal(),
+                })
                 .then((response) => {
                     this.dashboard = response.data;
                     this.ready = true;
                 })
-                .catch(() => {
+                .catch((error) => {
+                    if (error.code === 'ERR_CANCELED') {
+                        return;
+                    }
+
                     this.ready = true;
                 });
         },
@@ -103,86 +174,75 @@ export default {
                     <router-link to="/requests" class="nw-shell-action">Requests ↗</router-link>
                 </div>
                 <div class="nw-shell-grid nw-shell-grid-2">
-                    <div class="nw-pane">
-                        <div class="nw-pane-head">
-                            <div>
-                                <div class="nw-kicker">Requests</div>
-                                <div class="nw-metric">{{ formatCount(dashboard.requests.total) }}</div>
-                            </div>
-                            <div class="nw-legend">
-                                <div v-for="item in statusSeries" :key="item.key" class="nw-legend-item">
-                                    <span class="nw-legend-label">
-                                        <span class="nw-legend-dot" :style="{ background: item.color }"></span>
-                                        {{ item.label }}
-                                    </span>
-                                    <strong>{{ formatCount(dashboard.requests.status[item.key]) }}</strong>
-                                </div>
-                            </div>
-                        </div>
-                        <bar-chart :points="requestBuckets" :series="statusSeries" :height="188"></bar-chart>
-                        <div class="nw-axis">
-                            <span>{{ formatBucketLabel(firstBucket) }}</span>
-                            <span>{{ formatBucketLabel(lastBucket) }}</span>
-                        </div>
-                    </div>
-                    <div class="nw-pane">
-                        <div class="nw-pane-head">
-                            <div>
-                                <div class="nw-kicker">Duration</div>
-                                <div class="nw-metric">
-                                    {{ formatDuration(dashboard.requests.duration.min) }} –
-                                    {{ formatDuration(dashboard.requests.duration.max) }}
-                                </div>
-                            </div>
-                            <div class="nw-legend">
-                                <div class="nw-legend-item">
-                                    <span class="nw-legend-label">
-                                        <span class="nw-legend-dot" style="background: #9aa3af"></span>
-                                        AVG
-                                    </span>
-                                    <strong>{{ formatDuration(dashboard.requests.duration.avg) }}</strong>
-                                </div>
-                                <div class="nw-legend-item">
-                                    <span class="nw-legend-label">
-                                        <span class="nw-legend-dot" style="background: #e8a54b"></span>
-                                        P95
-                                    </span>
-                                    <strong>{{ formatDuration(dashboard.requests.duration.p95) }}</strong>
-                                </div>
-                            </div>
-                        </div>
-                        <line-chart :points="requestBuckets" :series="durationSeries" :height="188"></line-chart>
-                        <div class="nw-axis">
-                            <span>{{ formatBucketLabel(firstBucket) }}</span>
-                            <span>{{ formatBucketLabel(lastBucket) }}</span>
-                        </div>
-                    </div>
+                    <chart-pane
+                        kicker="Requests"
+                        :metric="formatCount(dashboard.requests.total)"
+                        :series="statusSeries"
+                        :totals="dashboard.requests.status"
+                        :first-bucket="firstBucket"
+                        :last-bucket="lastBucket"
+                    >
+                        <bar-chart :points="requestBuckets" :series="statusSeries" :height="dashboardHeight"></bar-chart>
+                    </chart-pane>
+                    <chart-pane
+                        kicker="Duration"
+                        :metric="durationRange"
+                        :series="durationSeries"
+                        :totals="dashboard.requests.duration"
+                        format="duration"
+                        :first-bucket="firstBucket"
+                        :last-bucket="lastBucket"
+                    >
+                        <line-chart :points="requestBuckets" :series="durationSeries" :height="dashboardHeight"></line-chart>
+                    </chart-pane>
                 </div>
             </div>
 
             <div class="nw-shell">
                 <div class="nw-shell-head">
                     <div class="nw-shell-title">Application</div>
-                    <router-link to="/exceptions" class="nw-shell-action">View ↗</router-link>
                 </div>
                 <div class="nw-shell-grid nw-shell-grid-3">
+                    <chart-pane
+                        kicker="Exceptions"
+                        :first-bucket="exceptionFirstBucket"
+                        :last-bucket="exceptionLastBucket"
+                    >
+                        <router-link slot="action" to="/exceptions" class="nw-shell-action">View ↗</router-link>
+                        <template slot="copy">
+                            <div class="nw-copy">
+                                <strong>{{ Number(dashboard.exceptions.total || 0).toLocaleString() }} exceptions</strong>
+                                reported in the last {{ periodLabel }}.
+                            </div>
+                            <div class="text-muted small mt-3 mb-3">
+                                Errors have impacted {{ dashboard.exceptions.users || 0 }} users.
+                            </div>
+                        </template>
+                        <bar-chart
+                            :points="exceptionBuckets"
+                            :color="exceptionColor"
+                            :height="sparklineHeight"
+                            :stacked="false"
+                        ></bar-chart>
+                    </chart-pane>
                     <div class="nw-pane">
-                        <div class="nw-kicker">Exceptions</div>
-                        <div class="nw-copy">
-                            <strong>{{ Number(dashboard.exceptions.total || 0).toLocaleString() }} exceptions</strong>
-                            reported in the last {{ periodLabel }}.
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="nw-kicker mb-0">Routes</div>
+                            <router-link
+                                v-if="slowRoutesTotal"
+                                :to="slowRoutesLink"
+                                class="nw-shell-action"
+                            >
+                                View all ↗
+                            </router-link>
                         </div>
-                        <div class="text-muted small mt-3">
-                            Errors have impacted {{ dashboard.exceptions.users || 0 }} users.
-                        </div>
-                    </div>
-                    <div class="nw-pane">
-                        <div class="nw-kicker">Routes</div>
                         <div class="nw-copy mb-3">
-                            <strong>{{ dashboard.slow_routes.length }} routes exceeded</strong>
+                            <strong>{{ slowRoutesTotal }} routes exceeded</strong>
                             performance thresholds
                         </div>
-                        <div v-if="!dashboard.slow_routes.length" class="text-muted small">No routes above 1000ms</div>
+                        <div v-if="!slowRoutesTotal" class="text-muted small">
+                            No routes above {{ formatDuration(dashboard.slow_route_threshold_ms || 1000) }}
+                        </div>
                         <div
                             v-for="(route, index) in dashboard.slow_routes"
                             :key="route.method + route.uri"
@@ -194,42 +254,16 @@ export default {
                             <span class="ml-auto text-muted small">MAX {{ formatDuration(route.max_duration) }}</span>
                         </div>
                     </div>
-                    <div class="nw-pane">
-                        <div class="nw-pane-head">
-                            <div>
-                                <div class="nw-kicker">Job attempts</div>
-                                <div class="nw-metric">{{ formatCount(dashboard.jobs.processed + dashboard.jobs.pending + dashboard.jobs.failed) }}</div>
-                            </div>
-                            <div class="nw-legend">
-                                <div class="nw-legend-item">
-                                    <span class="nw-legend-label">
-                                        <span class="nw-legend-dot" style="background: #8b7cf7"></span>
-                                        PROCESSED
-                                    </span>
-                                    <strong>{{ formatCount(dashboard.jobs.processed) }}</strong>
-                                </div>
-                                <div class="nw-legend-item">
-                                    <span class="nw-legend-label">
-                                        <span class="nw-legend-dot" style="background: #e8a54b"></span>
-                                        RELEASED
-                                    </span>
-                                    <strong>{{ formatCount(dashboard.jobs.pending) }}</strong>
-                                </div>
-                                <div class="nw-legend-item">
-                                    <span class="nw-legend-label">
-                                        <span class="nw-legend-dot" style="background: #e85d6c"></span>
-                                        FAILED
-                                    </span>
-                                    <strong>{{ formatCount(dashboard.jobs.failed) }}</strong>
-                                </div>
-                            </div>
-                        </div>
-                        <bar-chart :points="jobBuckets" :series="jobSeries" :height="128"></bar-chart>
-                        <div class="nw-axis">
-                            <span>{{ formatBucketLabel(jobFirstBucket) }}</span>
-                            <span>{{ formatBucketLabel(jobLastBucket) }}</span>
-                        </div>
-                    </div>
+                    <chart-pane
+                        kicker="Job attempts"
+                        :metric="formatCount(dashboard.jobs.processed + dashboard.jobs.pending + dashboard.jobs.failed)"
+                        :series="jobSeries"
+                        :totals="jobTotals"
+                        :first-bucket="jobFirstBucket"
+                        :last-bucket="jobLastBucket"
+                    >
+                        <bar-chart :points="jobBuckets" :series="jobSeries" :height="paneHeight"></bar-chart>
+                    </chart-pane>
                 </div>
             </div>
         </template>

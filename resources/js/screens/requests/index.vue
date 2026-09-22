@@ -1,7 +1,10 @@
 <script type="text/ecmascript-6">
 import StylesMixin from './../../mixins/entriesStyles';
+import ResourceSparkline from '../../components/ResourceSparkline.vue';
 
 export default {
+    components: { ResourceSparkline },
+
     mixins: [
         StylesMixin,
     ],
@@ -10,6 +13,17 @@ export default {
 
 <template>
     <div>
+        <resource-sparkline type="request" title="Requests"></resource-sparkline>
+
+        <div v-if="$route.query.min_duration" class="d-flex align-items-center mb-3">
+            <span class="text-muted small mr-3">
+                Showing requests slower than {{ formatDuration($route.query.min_duration) }}
+            </span>
+            <router-link :to="{ path: '/requests', query: { hours: periodHours } }" class="nw-shell-action">
+                Clear filter
+            </router-link>
+        </div>
+
         <monitored-requests></monitored-requests>
 
         <index-screen title="Requests" resource="requests" endpoint-override="" remember-closed-key="telescopeRequestsCardClosed">
@@ -40,7 +54,7 @@ export default {
             </td>
 
             <td class="table-fit text-right text-muted">
-                <span v-if="slotProps.entry.content.duration">{{ slotProps.entry.content.duration }}ms</span>
+                <span v-if="slotProps.entry.content.duration">{{ formatDuration(slotProps.entry.content.duration) }}</span>
                 <span v-else>-</span>
             </td>
 

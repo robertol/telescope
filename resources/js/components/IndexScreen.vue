@@ -15,6 +15,7 @@ export default {
             tag: '',
             endpoint: '',
             familyHash: '',
+            minDuration: '',
             entries: [],
             ready: false,
             requestController: new AbortController(),
@@ -60,6 +61,8 @@ export default {
             this.endpointOverride !== undefined && this.endpointOverride !== null
                 ? this.endpointOverride
                 : this.$route.query.endpoint || '';
+
+        this.minDuration = this.$route.query.min_duration || '';
 
         this.loadEntries((entries) => {
             this.entries = entries;
@@ -110,6 +113,8 @@ export default {
                     ? this.endpointOverride
                     : this.$route.query.endpoint || '';
 
+            this.minDuration = this.$route.query.min_duration || '';
+
             this.ready = false;
 
             this.loadEntries((entries) => {
@@ -131,6 +136,7 @@ export default {
             return axios.post(Telescope.basePath + '/telescope-api/' + this.resource +
                     '?tag=' + encodeURIComponent(this.tag) +
                     '&endpoint=' + encodeURIComponent(this.endpoint) +
+                    '&min_duration=' + encodeURIComponent(this.minDuration) +
                     '&before=' + this.pageBefore +
                     '&take=' + this.entriesPerRequest +
                     '&family_hash=' + encodeURIComponent(this.familyHash),
@@ -180,6 +186,7 @@ export default {
                 axios.post(Telescope.basePath + '/telescope-api/' + this.resource +
                         '?tag=' + encodeURIComponent(this.tag) +
                         '&endpoint=' + encodeURIComponent(this.endpoint) +
+                        '&min_duration=' + encodeURIComponent(this.minDuration) +
                         '&take=1' +
                         '&family_hash=' + encodeURIComponent(this.familyHash),
                         null, {signal}

@@ -1,10 +1,15 @@
 <script type="text/ecmascript-6">
 import axios from 'axios';
 import BarChart from '../../components/BarChart.vue';
+import ChartPane from '../../components/ChartPane.vue';
 import PeriodSelector from '../../components/PeriodSelector.vue';
+import AutoRefresh from '../../mixins/autoRefresh';
+import { RESOURCE_COLORS, CHART_HEIGHT } from '../../charts/series';
 
 export default {
-    components: { BarChart, PeriodSelector },
+    components: { BarChart, ChartPane, PeriodSelector },
+
+    mixins: [AutoRefresh],
 
     data() {
         return {
@@ -12,6 +17,8 @@ export default {
             search: '',
             status: 'all',
             ready: false,
+            exceptionColor: RESOURCE_COLORS.exception,
+            sparklineHeight: CHART_HEIGHT.sparkline,
         };
     },
 
@@ -43,6 +50,10 @@ export default {
 
             return timeline.length ? timeline[timeline.length - 1].bucket : null;
         },
+
+        volumeTotal() {
+            return this.summary.handled + this.summary.unhandled;
+        },
     },
 
     watch: {
@@ -60,17 +71,28 @@ export default {
     },
 
     methods: {
-        load() {
+        load(options) {
+            const silent = Boolean(options && options.silent);
             const params = { hours: this.periodHours };
 
             if (this.status !== 'all') {
                 params.status = this.status;
             }
 
-            axios.get(Telescope.basePath + '/telescope-api/exceptions/summary', { params }).then((response) => {
-                this.summary = response.data;
-                this.ready = true;
-            });
+            return axios
+                .get(Telescope.basePath + '/telescope-api/exceptions/summary', {
+                    params,
+                    signal: this.autoRefreshSignal(),
+                })
+                .then((response) => {
+                    this.summary = response.data;
+                    this.ready = true;
+                })
+                .catch((error) => {
+                    if (error.code === 'ERR_CANCELED') {
+                        return;
+                    }
+                });
         },
     },
 };
@@ -78,19 +100,26 @@ export default {
 
 <template>
     <div>
-        <div class="nw-shell mb-4">
-            <div class="nw-pane nw-pane-sparkline">
-                <bar-chart :points="summary.timeline" color="#ef4444" :height="72"></bar-chart>
-                <div class="nw-axis">
-                    <span>{{ formatBucketLabel(firstBucket) }}</span>
-                    <span>{{ formatBucketLabel(lastBucket) }}</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="d-flex align-items-center justify-content-between mt-4 mb-3">
+        <div class="nw-dashboard-head">
             <h1 class="nw-page-title mb-0">{{ titleCount }} Exceptions</h1>
             <period-selector></period-selector>
+        </div>
+
+        <div class="nw-shell mb-4">
+            <chart-pane
+                sparkline
+                kicker="Volume"
+                :metric="formatCount(volumeTotal)"
+                :first-bucket="firstBucket"
+                :last-bucket="lastBucket"
+            >
+                <bar-chart
+                    :points="summary.timeline"
+                    :color="exceptionColor"
+                    :height="sparklineHeight"
+                    :stacked="false"
+                ></bar-chart>
+            </chart-pane>
         </div>
 
         <div class="d-flex align-items-center mb-3">

@@ -10,6 +10,7 @@ use Laravel\Telescope\EntryType;
 use Laravel\Telescope\Http\Middleware\Authorize;
 use Laravel\Telescope\Tests\Console\CreatesTelescopeEntries;
 use Laravel\Telescope\Tests\FeatureTestCase;
+use Orchestra\Testbench\Attributes\WithConfig;
 use Orchestra\Testbench\Http\Middleware\VerifyCsrfToken;
 
 class DashboardTest extends FeatureTestCase
@@ -87,6 +88,8 @@ class DashboardTest extends FeatureTestCase
             ->assertJsonPath('jobs.pending', 1)
             ->assertJsonPath('slow_routes.0.uri', '/v1/slow');
 
+        $this->assertGreaterThan(300, count($response->json('exceptions.timeline')));
+
         $buckets = $response->json('requests.buckets');
         $requestBucket = collect($buckets)->first(fn ($bucket) => ($bucket['total'] ?? 0) > 0);
 
@@ -143,5 +146,39 @@ class DashboardTest extends FeatureTestCase
                 $query
             );
         }
+    }
+
+    #[WithConfig('telescope.watchers', [], defer: false)]
+    public function test_dashboard_fresh_query_bypasses_cached_payload(): void
+    {
+        Cache::forget('telescope:dashboard:24');
+
+        $this->createRequest([
+            'method' => 'GET',
+            'uri' => '/v1/one',
+            'response_status' => 200,
+            'duration' => 40,
+        ]);
+
+        $cachedTotal = $this->getJson('/telescope/telescope-api/dashboard?hours=24')
+            ->assertSuccessful()
+            ->json('requests.total');
+
+        $this->assertGreaterThanOrEqual(1, $cachedTotal);
+
+        $this->createRequest([
+            'method' => 'GET',
+            'uri' => '/v1/two',
+            'response_status' => 200,
+            'duration' => 40,
+        ]);
+
+        $this->getJson('/telescope/telescope-api/dashboard?hours=24')
+            ->assertSuccessful()
+            ->assertJsonPath('requests.total', $cachedTotal);
+
+        $this->getJson('/telescope/telescope-api/dashboard?hours=24&fresh=1')
+            ->assertSuccessful()
+            ->assertJsonPath('requests.total', $cachedTotal + 1);
     }
 }

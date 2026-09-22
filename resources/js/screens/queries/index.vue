@@ -1,9 +1,16 @@
 <script type="text/ecmascript-6">
-export default {}
+import ResourceSparkline from '../../components/ResourceSparkline.vue';
+
+export default {
+    components: { ResourceSparkline },
+}
 </script>
 
 <template>
-    <index-screen title="Queries" resource="queries">
+    <div>
+        <resource-sparkline type="query" title="Queries"></resource-sparkline>
+
+        <index-screen title="Queries" resource="queries">
         <tr slot="table-header">
             <th scope="col">Query</th>
             <th scope="col" class="text-right">Duration</th>
@@ -51,4 +58,5 @@ export default {}
             </td>
         </template>
     </index-screen>
+    </div>
 </template>

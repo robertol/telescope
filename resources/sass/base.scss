@@ -18,6 +18,11 @@ html {
     display: flex;
     align-items: stretch;
     min-height: 100vh;
+    --nw-chart-axis: #{$chart-axis};
+    --nw-chart-tick: #{$chart-tick};
+    --nw-tooltip-bg: #{$tooltip-bg};
+    --nw-tooltip-color: #{$tooltip-color};
+    --nw-tooltip-muted: #{$tooltip-muted};
 }
 
 .nw-sidebar {
@@ -615,10 +620,6 @@ button:hover {
     cursor: pointer;
 }
 
-.bar-chart {
-    display: block;
-}
-
 .period-selector {
     display: inline-flex;
     align-items: center;
@@ -824,10 +825,18 @@ button:hover {
     height: 100%;
 }
 
+.nw-chart-axis {
+    stroke: var(--nw-chart-axis);
+}
+
+.nw-chart-tick {
+    fill: var(--nw-chart-tick);
+}
+
 .nw-tooltip {
     position: absolute;
-    background: #121214;
-    color: #e4e4e7;
+    background: var(--nw-tooltip-bg);
+    color: var(--nw-tooltip-color);
     padding: 0.5rem 0.65rem;
     border-radius: 8px;
     font-size: 0.72rem;
@@ -839,7 +848,7 @@ button:hover {
 }
 
 .nw-tooltip-time {
-    color: #9ca3af;
+    color: var(--nw-tooltip-muted);
     margin-bottom: 0.35rem;
     font-size: 0.68rem;
 }

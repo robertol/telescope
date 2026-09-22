@@ -1,7 +1,10 @@
 <script type="text/ecmascript-6">
 import StylesMixin from './../../mixins/entriesStyles';
+import ResourceSparkline from '../../components/ResourceSparkline.vue';
 
 export default {
+    components: { ResourceSparkline },
+
     mixins: [
         StylesMixin,
     ],
@@ -9,7 +12,10 @@ export default {
 </script>
 
 <template>
-    <index-screen title="Jobs" resource="jobs" show-all-family="true">
+    <div>
+        <resource-sparkline type="job" title="Jobs"></resource-sparkline>
+
+        <index-screen title="Jobs" resource="jobs" show-all-family="true">
         <tr slot="table-header">
             <th scope="col">Job</th>
             <th scope="col">Status</th>
@@ -59,4 +65,5 @@ export default {
             </td>
         </template>
     </index-screen>
+    </div>
 </template>

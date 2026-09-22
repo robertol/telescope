@@ -17,8 +17,13 @@ class DashboardController extends Controller
     public function index(Request $request): JsonResponse
     {
         $hours = $this->hours($request);
+        $key = 'telescope:dashboard:'.$hours;
 
-        $payload = Cache::remember('telescope:dashboard:'.$hours, 60, fn () => $this->aggregator->dashboard($hours));
+        if ($request->boolean('fresh')) {
+            Cache::forget($key);
+        }
+
+        $payload = Cache::remember($key, 60, fn () => $this->aggregator->dashboard($hours));
 
         return response()->json($payload);
     }

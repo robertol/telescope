@@ -17,6 +17,7 @@ Route::get('/telescope-api/settings', 'DashboardController@settings');
 Route::get('/telescope-api/users', 'DashboardController@users');
 
 Route::get('/telescope-api/exceptions/summary', 'ExceptionSummaryController@index');
+Route::get('/telescope-api/summaries/{type}', 'ResourceSummaryController@show');
 
 Route::get('/telescope-api/outgoing-requests/hosts', 'OutgoingRequestController@hosts');
 Route::get('/telescope-api/outgoing-requests', 'OutgoingRequestController@index');

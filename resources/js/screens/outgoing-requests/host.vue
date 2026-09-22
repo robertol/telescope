@@ -2,28 +2,25 @@
 import axios from 'axios';
 import BarChart from '../../components/BarChart.vue';
 import LineChart from '../../components/LineChart.vue';
+import ChartPane from '../../components/ChartPane.vue';
 import PeriodSelector from '../../components/PeriodSelector.vue';
 import StylesMixin from '../../mixins/entriesStyles';
+import AutoRefresh from '../../mixins/autoRefresh';
+import { STATUS_SERIES, DURATION_SERIES, CHART_HEIGHT } from '../../charts/series';
 
 export default {
-    components: { BarChart, LineChart, PeriodSelector },
+    components: { BarChart, LineChart, ChartPane, PeriodSelector },
 
-    mixins: [StylesMixin],
+    mixins: [StylesMixin, AutoRefresh],
 
     data() {
         return {
             payload: null,
             filter: 'all',
             ready: false,
-            statusSeries: [
-                { key: '123xx', color: '#8b93a7', label: '1/2/3XX' },
-                { key: '4xx', color: '#e8a54b', label: '4XX' },
-                { key: '5xx', color: '#e85d6c', label: '5XX' },
-            ],
-            durationSeries: [
-                { key: 'avg', color: '#9aa3af', label: 'AVG' },
-                { key: 'p95', color: '#e8a54b', label: 'P95' },
-            ],
+            statusSeries: STATUS_SERIES,
+            durationSeries: DURATION_SERIES,
+            paneHeight: CHART_HEIGHT.pane,
         };
     },
 
@@ -50,6 +47,18 @@ export default {
 
         lastBucket() {
             return this.requestBuckets.length ? this.requestBuckets[this.requestBuckets.length - 1].bucket : null;
+        },
+
+        durationRange() {
+            if (!this.payload) {
+                return '';
+            }
+
+            return (
+                this.formatDuration(this.payload.requests.duration.min) +
+                ' – ' +
+                this.formatDuration(this.payload.requests.duration.max)
+            );
         },
 
         entries() {
@@ -87,15 +96,27 @@ export default {
     },
 
     methods: {
-        load() {
-            this.ready = false;
+        load(options) {
+            const silent = Boolean(options && options.silent);
 
-            axios
+            if (!silent) {
+                this.ready = false;
+            }
+
+            return axios
                 .get(Telescope.basePath + '/telescope-api/outgoing-requests', {
                     params: { host: this.host, hours: this.periodHours },
+                    signal: this.autoRefreshSignal(),
                 })
                 .then((response) => {
                     this.payload = response.data;
+                    this.ready = true;
+                })
+                .catch((error) => {
+                    if (error.code === 'ERR_CANCELED') {
+                        return;
+                    }
+
                     this.ready = true;
                 });
         },
@@ -123,55 +144,28 @@ export default {
 
         <div v-else>
             <div class="nw-shell mb-4">
-                <div class="row no-gutters">
-                    <div class="col-md-6 nw-pane">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <div class="nw-kicker">Requests</div>
-                                <div class="nw-metric">{{ formatCount(payload.requests.total) }}</div>
-                            </div>
-                            <div class="nw-legend">
-                                <div v-for="item in statusSeries" :key="item.key" class="nw-legend-item">
-                                    <span class="nw-legend-dot" :style="{ background: item.color }"></span>
-                                    {{ item.label }}
-                                    <strong>{{ formatCount(payload.requests.status[item.key]) }}</strong>
-                                </div>
-                            </div>
-                        </div>
-                        <bar-chart :points="requestBuckets" :series="statusSeries" :height="140"></bar-chart>
-                        <div class="nw-axis">
-                            <span>{{ formatBucketLabel(firstBucket) }}</span>
-                            <span>{{ formatBucketLabel(lastBucket) }}</span>
-                        </div>
-                    </div>
-                    <div class="col-md-6 nw-pane nw-pane-split">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <div class="nw-kicker">Duration</div>
-                                <div class="nw-metric">
-                                    {{ formatDuration(payload.requests.duration.min) }} –
-                                    {{ formatDuration(payload.requests.duration.max) }}
-                                </div>
-                            </div>
-                            <div class="nw-legend">
-                                <div class="nw-legend-item">
-                                    <span class="nw-legend-dot" style="background: #9aa3af"></span>
-                                    AVG
-                                    <strong>{{ formatDuration(payload.requests.duration.avg) }}</strong>
-                                </div>
-                                <div class="nw-legend-item">
-                                    <span class="nw-legend-dot" style="background: #e8a54b"></span>
-                                    P95
-                                    <strong>{{ formatDuration(payload.requests.duration.p95) }}</strong>
-                                </div>
-                            </div>
-                        </div>
-                        <line-chart :points="requestBuckets" :series="durationSeries" :height="140"></line-chart>
-                        <div class="nw-axis">
-                            <span>{{ formatBucketLabel(firstBucket) }}</span>
-                            <span>{{ formatBucketLabel(lastBucket) }}</span>
-                        </div>
-                    </div>
+                <div class="nw-shell-grid nw-shell-grid-2">
+                    <chart-pane
+                        kicker="Requests"
+                        :metric="formatCount(payload.requests.total)"
+                        :series="statusSeries"
+                        :totals="payload.requests.status"
+                        :first-bucket="firstBucket"
+                        :last-bucket="lastBucket"
+                    >
+                        <bar-chart :points="requestBuckets" :series="statusSeries" :height="paneHeight"></bar-chart>
+                    </chart-pane>
+                    <chart-pane
+                        kicker="Duration"
+                        :metric="durationRange"
+                        :series="durationSeries"
+                        :totals="payload.requests.duration"
+                        format="duration"
+                        :first-bucket="firstBucket"
+                        :last-bucket="lastBucket"
+                    >
+                        <line-chart :points="requestBuckets" :series="durationSeries" :height="paneHeight"></line-chart>
+                    </chart-pane>
                 </div>
             </div>
 

@@ -1,7 +1,13 @@
 <script type="text/ecmascript-6">
 import axios from 'axios';
+import PeriodSelector from '../../components/PeriodSelector.vue';
+import AutoRefresh from '../../mixins/autoRefresh';
 
 export default {
+    components: { PeriodSelector },
+
+    mixins: [AutoRefresh],
+
     data() {
         return {
             users: [],
@@ -39,13 +45,20 @@ export default {
 
     methods: {
         load() {
-            axios
-                .get(Telescope.basePath + '/telescope-api/users', { params: { hours: this.periodHours } })
+            return axios
+                .get(Telescope.basePath + '/telescope-api/users', {
+                    params: { hours: this.periodHours },
+                    signal: this.autoRefreshSignal(),
+                })
                 .then((response) => {
                     this.users = response.data.users || [];
                     this.ready = true;
                 })
-                .catch(() => {
+                .catch((error) => {
+                    if (error.code === 'ERR_CANCELED') {
+                        return;
+                    }
+
                     this.ready = true;
                 });
         },
@@ -65,9 +78,12 @@ export default {
 
 <template>
     <div>
-        <div class="d-flex align-items-center justify-content-between mb-4">
+        <div class="nw-dashboard-head">
             <h1 class="nw-page-title mb-0">Users</h1>
-            <input v-model="search" type="search" class="form-control w-auto" placeholder="Search" />
+            <div class="d-flex align-items-center flex-wrap" style="gap: 0.75rem">
+                <input v-model="search" type="search" class="form-control w-auto" placeholder="Search" />
+                <period-selector></period-selector>
+            </div>
         </div>
 
         <div class="card">
