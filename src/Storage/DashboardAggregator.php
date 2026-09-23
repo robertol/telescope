@@ -687,6 +687,10 @@ class DashboardAggregator
             return "to_char(date_trunc('hour', created_at), 'YYYY-MM-DD HH24:00:00')";
         }
 
+        if ($driver === 'mysql' || $driver === 'mariadb') {
+            return "date_format(created_at, '%Y-%m-%d %H:00:00')";
+        }
+
         return "strftime('%Y-%m-%d %H:00:00', created_at)";
     }
 
@@ -696,6 +700,10 @@ class DashboardAggregator
 
         if ($driver === 'pgsql') {
             return "to_char(date_trunc('minute', created_at), 'YYYY-MM-DD HH24:MI:00')";
+        }
+
+        if ($driver === 'mysql' || $driver === 'mariadb') {
+            return "date_format(created_at, '%Y-%m-%d %H:%i:00')";
         }
 
         return "strftime('%Y-%m-%d %H:%M:00', created_at)";
