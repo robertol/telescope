@@ -28,6 +28,18 @@
     }
 }
 
+.vjs-tree-node {
+    &:hover,
+    &.is-highlight {
+        background-color: $sidebar-nav-active-bg !important;
+    }
+}
+
+.vjs-tree-brackets:hover,
+.vjs-carets:hover {
+    color: $link-color;
+}
+
 .hljs-keyword,
 .hljs-selector-tag,
 .hljs-addition,

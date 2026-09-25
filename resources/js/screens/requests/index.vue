@@ -1,13 +1,26 @@
 <script type="text/ecmascript-6">
 import StylesMixin from './../../mixins/entriesStyles';
 import ResourceSparkline from '../../components/ResourceSparkline.vue';
+import RequestDetailsPanel from '../../components/RequestDetailsPanel.vue';
 
 export default {
-    components: { ResourceSparkline },
+    components: { ResourceSparkline, RequestDetailsPanel },
 
     mixins: [
         StylesMixin,
     ],
+
+    data() {
+        return {
+            expandedId: null,
+        };
+    },
+
+    methods: {
+        toggleExpanded(id) {
+            this.expandedId = this.expandedId === id ? null : id;
+        },
+    },
 }
 </script>
 
@@ -26,7 +39,7 @@ export default {
 
         <monitored-requests></monitored-requests>
 
-        <index-screen title="Requests" resource="requests" endpoint-override="" remember-closed-key="telescopeRequestsCardClosed">
+        <index-screen title="Requests" resource="requests" endpoint-override="" remember-closed-key="telescopeRequestsCardClosed" :row-clickable="true" v-on:row-click="toggleExpanded($event.id)">
         <tr slot="table-header">
             <th scope="col">Verb</th>
             <th scope="col">Path</th>
@@ -67,22 +80,33 @@ export default {
             </td>
 
             <td class="table-fit">
-                <router-link
-                    :to="{
-                        name: 'request-preview',
-                        params: { id: slotProps.entry.id },
-                    }"
-                    class="control-action"
+                <button
+                    type="button"
+                    class="control-action border-0 bg-transparent p-0"
+                    v-on:click.stop="toggleExpanded(slotProps.entry.id)"
+                    :title="expandedId === slotProps.entry.id ? 'Fechar' : 'Request Details'"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        :style="{ transform: expandedId === slotProps.entry.id ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }"
+                    >
                         <path
                             fill-rule="evenodd"
                             d="M10 18a8 8 0 100-16 8 8 0 000 16zM6.75 9.25a.75.75 0 000 1.5h4.59l-2.1 1.95a.75.75 0 001.02 1.1l3.5-3.25a.75.75 0 000-1.1l-3.5-3.25a.75.75 0 10-1.02 1.1l2.1 1.95H6.75z"
                             clip-rule="evenodd"
                         />
                     </svg>
-                </router-link>
+                </button>
             </td>
+        </template>
+
+        <template slot="after-row" slot-scope="slotProps">
+            <tr v-if="expandedId === slotProps.entry.id" :key="'detail-' + slotProps.entry.id">
+                <td colspan="6" class="p-3">
+                    <request-details-panel :id="slotProps.entry.id" :update-title="false"></request-details-panel>
+                </td>
+            </tr>
         </template>
         </index-screen>
     </div>

@@ -4,7 +4,7 @@ import _ from 'lodash';
 import axios from 'axios';
 
 export default {
-    props: ['resource', 'title', 'showAllFamily', 'hideSearch', 'endpointOverride', 'rememberClosedKey'],
+    props: ['resource', 'title', 'showAllFamily', 'hideSearch', 'endpointOverride', 'rememberClosedKey', 'rowClickable'],
 
 
     /**
@@ -342,6 +342,14 @@ export default {
             localStorage.removeItem(this.rememberClosedKey);
         },
 
+        onRowClick(entry) {
+            if (!this.rowClickable) {
+                return;
+            }
+
+            this.$emit('row-click', entry);
+        },
+
         /**
          * Update the existing entries if needed.
          */
@@ -501,9 +509,16 @@ export default {
                     </td>
                 </tr>
 
-                <tr v-for="entry in entries" :key="entry.id">
-                    <slot name="row" :entry="entry"></slot>
-                </tr>
+                <template v-for="entry in entries">
+                    <tr
+                        :key="'row-' + entry.id"
+                        :class="{ 'cursor-pointer': rowClickable }"
+                        v-on:click="onRowClick(entry)"
+                    >
+                        <slot name="row" :entry="entry"></slot>
+                    </tr>
+                    <slot name="after-row" :entry="entry"></slot>
+                </template>
             </tbody>
         </table>
         </div>

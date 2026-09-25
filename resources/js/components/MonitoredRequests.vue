@@ -2,10 +2,13 @@
 import _ from 'lodash';
 import axios from 'axios';
 import StylesMixin from './../mixins/entriesStyles';
+import RequestDetailsPanel from './RequestDetailsPanel.vue';
 
 const CLOSED_ENDPOINTS_KEY = 'telescopeMonitoredRequestsClosed';
 
 export default {
+    components: {RequestDetailsPanel},
+
     mixins: [StylesMixin],
 
     data() {
@@ -18,6 +21,7 @@ export default {
             entriesPerRequest: 25,
             newEntriesTimeout: null,
             newEntriesTimer: 2500,
+            expandedKey: null,
         };
     },
 
@@ -54,6 +58,20 @@ export default {
 
         isClosed(endpoint) {
             return this.closedEndpoints.indexOf(endpoint) !== -1;
+        },
+
+        expansionKey(endpoint, entryId) {
+            return endpoint + ':' + entryId;
+        },
+
+        isExpanded(endpoint, entryId) {
+            return this.expandedKey === this.expansionKey(endpoint, entryId);
+        },
+
+        toggleExpanded(endpoint, entryId) {
+            const key = this.expansionKey(endpoint, entryId);
+
+            this.expandedKey = this.expandedKey === key ? null : key;
         },
 
         toggleEndpoint(endpoint) {
@@ -373,50 +391,64 @@ export default {
                             </td>
                         </tr>
 
-                        <tr v-for="entry in sections[endpoint].entries" :key="endpoint + '-' + entry.id">
-                            <td class="table-fit pr-0">
-                                <span class="badge" :class="'badge-' + requestMethodClass(entry.content.method)">
-                                    {{ entry.content.method }}
-                                </span>
-                            </td>
+                        <template v-for="entry in sections[endpoint].entries">
+                            <tr
+                                :key="endpoint + '-' + entry.id"
+                                class="cursor-pointer"
+                                v-on:click="toggleExpanded(endpoint, entry.id)"
+                            >
+                                <td class="table-fit pr-0">
+                                    <span class="badge" :class="'badge-' + requestMethodClass(entry.content.method)">
+                                        {{ entry.content.method }}
+                                    </span>
+                                </td>
 
-                            <td :title="entry.content.uri">
-                                {{ truncate(entry.content.uri, 50) }}
-                            </td>
+                                <td :title="entry.content.uri">
+                                    {{ truncate(entry.content.uri, 50) }}
+                                </td>
 
-                            <td class="table-fit text-center">
-                                <span class="badge" :class="'badge-' + requestStatusClass(entry.content.response_status)">
-                                    {{ entry.content.response_status }}
-                                </span>
-                            </td>
+                                <td class="table-fit text-center">
+                                    <span class="badge" :class="'badge-' + requestStatusClass(entry.content.response_status)">
+                                        {{ entry.content.response_status }}
+                                    </span>
+                                </td>
 
-                            <td class="table-fit text-right text-muted">
-                                <span v-if="entry.content.duration">{{ entry.content.duration }}ms</span>
-                                <span v-else>-</span>
-                            </td>
+                                <td class="table-fit text-right text-muted">
+                                    <span v-if="entry.content.duration">{{ entry.content.duration }}ms</span>
+                                    <span v-else>-</span>
+                                </td>
 
-                            <td class="table-fit text-muted" :data-timeago="entry.created_at" :title="entry.created_at">
-                                {{ timeAgo(entry.created_at) }}
-                            </td>
+                                <td class="table-fit text-muted" :data-timeago="entry.created_at" :title="entry.created_at">
+                                    {{ timeAgo(entry.created_at) }}
+                                </td>
 
-                            <td class="table-fit">
-                                <router-link
-                                    :to="{
-                                        name: 'request-preview',
-                                        params: { id: entry.id },
-                                    }"
-                                    class="control-action"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM6.75 9.25a.75.75 0 000 1.5h4.59l-2.1 1.95a.75.75 0 001.02 1.1l3.5-3.25a.75.75 0 000-1.1l-3.5-3.25a.75.75 0 10-1.02 1.1l2.1 1.95H6.75z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                </router-link>
-                            </td>
-                        </tr>
+                                <td class="table-fit">
+                                    <button
+                                        type="button"
+                                        class="control-action border-0 bg-transparent p-0"
+                                        v-on:click.stop="toggleExpanded(endpoint, entry.id)"
+                                        :title="isExpanded(endpoint, entry.id) ? 'Fechar' : 'Request Details'"
+                                    >
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 20 20"
+                                            :style="{ transform: isExpanded(endpoint, entry.id) ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }"
+                                        >
+                                            <path
+                                                fill-rule="evenodd"
+                                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM6.75 9.25a.75.75 0 000 1.5h4.59l-2.1 1.95a.75.75 0 001.02 1.1l3.5-3.25a.75.75 0 000-1.1l-3.5-3.25a.75.75 0 10-1.02 1.1l2.1 1.95H6.75z"
+                                                clip-rule="evenodd"
+                                            />
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr v-if="isExpanded(endpoint, entry.id)" :key="endpoint + '-detail-' + entry.id">
+                                <td colspan="6" class="p-3">
+                                    <request-details-panel :id="entry.id" :update-title="false"></request-details-panel>
+                                </td>
+                            </tr>
+                        </template>
                     </tbody>
                 </table>
 

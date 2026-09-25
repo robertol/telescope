@@ -14,6 +14,16 @@ html {
     color-scheme: dark;
 }
 
+::selection {
+    background: rgba(59, 111, 245, 0.4);
+    color: #f4f4f5;
+}
+
+::-moz-selection {
+    background: rgba(59, 111, 245, 0.4);
+    color: #f4f4f5;
+}
+
 .nw-app {
     display: flex;
     align-items: stretch;

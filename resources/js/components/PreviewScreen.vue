@@ -8,6 +8,7 @@ export default {
         title: {required: true},
         id: {required: true},
         entryPoint: {default: false},
+        updateTitle: {default: true},
     },
 
 
@@ -74,7 +75,10 @@ export default {
             this.requestController = new AbortController();
             clearTimeout(this.updateEntryTimeout);
 
-            document.title = this.title + " - Telescope";
+            if (this.updateTitle) {
+                document.title = this.title + " - Telescope";
+            }
+
             this.ready = false;
 
             if (this.unwatchReady) this.unwatchReady();

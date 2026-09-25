@@ -2,8 +2,11 @@
 import $ from 'jquery';
 import _ from 'lodash';
 import axios from 'axios';
+import RequestDetailsPanel from '../../components/RequestDetailsPanel.vue';
 
 export default {
+    components: {RequestDetailsPanel},
+
     /**
      * The component's data.
      */
@@ -15,6 +18,8 @@ export default {
             newTag: '',
             newEndpoint: '',
             openingEndpoint: null,
+            expandedEndpoint: null,
+            expandedRequestId: null,
             requestController: new AbortController(),
         };
     },
@@ -61,6 +66,11 @@ export default {
         removeEndpoint(endpoint){
             this.alertConfirm('Are you sure you want to remove this endpoint?', ()=> {
                 this.endpoints = _.reject(this.endpoints, e => e === endpoint);
+
+                if (this.expandedEndpoint === endpoint) {
+                    this.expandedEndpoint = null;
+                    this.expandedRequestId = null;
+                }
 
                 axios.post(Telescope.basePath + '/telescope-api/monitored-endpoints/delete', {endpoint: endpoint});
             });
@@ -140,9 +150,16 @@ export default {
         },
 
         /**
-         * Open Request Details for the newest request that matches this endpoint.
+         * Expand Request Details for the newest request that matches this endpoint.
          */
         openRequestDetails(endpoint) {
+            if (this.expandedEndpoint === endpoint) {
+                this.expandedEndpoint = null;
+                this.expandedRequestId = null;
+
+                return;
+            }
+
             if (this.openingEndpoint) {
                 return;
             }
@@ -163,10 +180,8 @@ export default {
                     return;
                 }
 
-                this.$router.push({
-                    name: 'request-preview',
-                    params: {id: entry.id},
-                });
+                this.expandedEndpoint = endpoint;
+                this.expandedRequestId = entry.id;
             }).catch(() => {
                 this.alertError('Could not open the request.');
             }).finally(() => {
@@ -258,37 +273,52 @@ export default {
                 </thead>
 
                 <tbody>
-                    <tr v-for="endpoint in endpoints" :key="endpoint">
-                        <td>
-                            <a href="#" v-on:click.prevent="filterByEndpoint(endpoint)">{{ truncate(endpoint, 140) }}</a>
-                        </td>
+                    <template v-for="endpoint in endpoints">
+                        <tr
+                            :key="endpoint"
+                            class="cursor-pointer"
+                            v-on:click="openRequestDetails(endpoint)"
+                        >
+                            <td>
+                                <a href="#" v-on:click.stop.prevent="filterByEndpoint(endpoint)">{{ truncate(endpoint, 140) }}</a>
+                            </td>
 
-                        <td class="table-fit text-right">
-                            <button
-                                type="button"
-                                class="control-action border-0 bg-transparent p-0 mr-2"
-                                v-on:click="openRequestDetails(endpoint)"
-                                :disabled="openingEndpoint === endpoint"
-                                title="Request Details"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM6.75 9.25a.75.75 0 000 1.5h4.59l-2.1 1.95a.75.75 0 001.02 1.1l3.5-3.25a.75.75 0 000-1.1l-3.5-3.25a.75.75 0 10-1.02 1.1l2.1 1.95H6.75z"
-                                        clip-rule="evenodd"
-                                    />
-                                </svg>
-                            </button>
+                            <td class="table-fit text-right">
+                                <button
+                                    type="button"
+                                    class="control-action border-0 bg-transparent p-0 mr-2"
+                                    v-on:click.stop="openRequestDetails(endpoint)"
+                                    :disabled="openingEndpoint === endpoint"
+                                    :title="expandedEndpoint === endpoint ? 'Fechar' : 'Request Details'"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 20 20"
+                                        :style="{ transform: expandedEndpoint === endpoint ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }"
+                                    >
+                                        <path
+                                            fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM6.75 9.25a.75.75 0 000 1.5h4.59l-2.1 1.95a.75.75 0 001.02 1.1l3.5-3.25a.75.75 0 000-1.1l-3.5-3.25a.75.75 0 10-1.02 1.1l2.1 1.95H6.75z"
+                                            clip-rule="evenodd"
+                                        />
+                                    </svg>
+                                </button>
 
-                            <a href="#" class="control-action" v-on:click.prevent="removeEndpoint(endpoint)">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                    <path
-                                        d="M6 2l2-2h4l2 2h4v2H2V2h4zM3 6h14l-1 14H4L3 6zm5 2v10h1V8H8zm3 0v10h1V8h-1z"
-                                    ></path>
-                                </svg>
-                            </a>
-                        </td>
-                    </tr>
+                                <a href="#" class="control-action" v-on:click.stop.prevent="removeEndpoint(endpoint)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                        <path
+                                            d="M6 2l2-2h4l2 2h4v2H2V2h4zM3 6h14l-1 14H4L3 6zm5 2v10h1V8H8zm3 0v10h1V8h-1z"
+                                        ></path>
+                                    </svg>
+                                </a>
+                            </td>
+                        </tr>
+                        <tr v-if="expandedEndpoint === endpoint && expandedRequestId" :key="endpoint + '-detail'">
+                            <td colspan="2" class="p-3">
+                                <request-details-panel :id="expandedRequestId" :update-title="false"></request-details-panel>
+                            </td>
+                        </tr>
+                    </template>
                 </tbody>
             </table>
         </div>
