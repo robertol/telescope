@@ -23,6 +23,7 @@ export default {
     css: {
         preprocessorOptions: {
             scss: {
+                loadPaths: ['node_modules'],
                 quietDeps: true,
                 silenceDeprecations: [
                     'legacy-js-api',
