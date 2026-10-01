@@ -68,6 +68,8 @@ class EntryModel extends Model
                 ->whereBatchId($query, $options)
                 ->whereTag($query, $options)
                 ->whereEndpoint($query, $options)
+                ->whereIp($query, $options)
+                ->whereEmail($query, $options)
                 ->whereMinDuration($query, $options)
                 ->whereFamilyHash($query, $options)
                 ->whereBeforeSequence($query, $options)
@@ -178,6 +180,47 @@ class EntryModel extends Model
     }
 
     /**
+     * Scope the query for the given client IP address.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  \Laravel\Telescope\Storage\EntryQueryOptions  $options
+     * @return $this
+     */
+    protected function whereIp($query, EntryQueryOptions $options)
+    {
+        $query->when($options->ip, function ($query, $ip) {
+            $this->whereContentAttribute($query, 'ip_address', '=', $ip);
+        });
+
+        return $this;
+    }
+
+    /**
+     * Scope the query for the given authenticated user email.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  \Laravel\Telescope\Storage\EntryQueryOptions  $options
+     * @return $this
+     */
+    protected function whereEmail($query, EntryQueryOptions $options)
+    {
+        $query->when($options->email, function ($query, $email) {
+            $like = '%'.$email.'%';
+
+            if ($query->getConnection()->getDriverName() === 'pgsql') {
+                return $query->whereRaw("(content::jsonb)->'user'->>'email' ILIKE ?", [$like]);
+            }
+
+            return $query->whereRaw(
+                "lower(coalesce(json_extract(content, '$.user.email'), '')) like ?",
+                [strtolower($like)]
+            );
+        });
+
+        return $this;
+    }
+
+    /**
      * Constrain a JSON content attribute in a driver-safe way.
      *
      * Telescope stores `content` as longText; PostgreSQL rejects `text ->>` operators
@@ -191,7 +234,7 @@ class EntryModel extends Model
      */
     protected function whereContentAttribute($query, string $attribute, string $operator, string $value): void
     {
-        if (! in_array($attribute, ['method', 'uri'], true)) {
+        if (! in_array($attribute, ['method', 'uri', 'ip_address'], true)) {
             throw new \InvalidArgumentException("Unsupported Telescope content attribute [{$attribute}].");
         }
 
@@ -265,7 +308,7 @@ class EntryModel extends Model
      */
     protected function filter($query, EntryQueryOptions $options)
     {
-        if ($options->familyHash || $options->tag || $options->batchId || $options->endpoint || $options->minDuration) {
+        if ($options->familyHash || $options->tag || $options->batchId || $options->endpoint || $options->ip || $options->email || $options->minDuration) {
             return $this;
         }
 

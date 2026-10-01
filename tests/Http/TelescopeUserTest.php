@@ -99,6 +99,34 @@ class TelescopeUserTest extends FeatureTestCase
         $this->get('/telescope')->assertSuccessful();
     }
 
+    public function test_signed_in_user_can_change_password_again_after_first_access(): void
+    {
+        $this->loginAsDefaultTelescopeUser();
+
+        $this->postJson('/telescope/telescope-api/password', [
+            'current_password' => 'new-secret-pass',
+            'password' => 'another-secret-pass',
+            'password_confirmation' => 'another-secret-pass',
+        ])->assertSuccessful()->assertJsonPath('ok', true);
+
+        $this->assertTrue(Hash::check(
+            'another-secret-pass',
+            TelescopeUser::query()->where('email', 'telescope@local')->value('password')
+        ));
+
+        $this->postJson('/telescope/telescope-api/logout')->assertSuccessful();
+
+        $this->postJson('/telescope/telescope-api/login', [
+            'email' => 'telescope@local',
+            'password' => 'new-secret-pass',
+        ])->assertForbidden();
+
+        $this->postJson('/telescope/telescope-api/login', [
+            'email' => 'telescope@local',
+            'password' => 'another-secret-pass',
+        ])->assertSuccessful()->assertJsonPath('must_change_password', false);
+    }
+
     public function test_guest_cannot_create_telescope_users(): void
     {
         $this->postJson('/telescope/telescope-api/accounts', [

@@ -4,6 +4,7 @@ namespace Laravel\Telescope\Http\Controllers;
 
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Laravel\Telescope\BatchTimeline;
 use Laravel\Telescope\Contracts\EntriesRepository;
 use Laravel\Telescope\EntryType;
 use Laravel\Telescope\EntryUpdate;
@@ -43,10 +44,12 @@ class ExceptionController extends EntryController
     public function show(EntriesRepository $storage, $id)
     {
         $entry = $storage->find($id)->generateAvatar();
+        $batch = $storage->get(null, EntryQueryOptions::forBatchId($entry->batchId)->limit(-1));
 
         return response()->json([
             'entry' => $entry,
-            'batch' => $storage->get(null, EntryQueryOptions::forBatchId($entry->batchId)->limit(-1)),
+            'batch' => $batch,
+            'timeline' => BatchTimeline::from($batch),
             'impact' => $entry->familyHash
                 ? app(DashboardAggregator::class)->exceptionImpact((string) $entry->familyHash)
                 : null,

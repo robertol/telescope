@@ -8,7 +8,15 @@ export default {
             watchers: [],
             accounts: [],
             form: { name: '', email: '', password: '' },
+            passwordForm: {
+                current_password: '',
+                password: '',
+                password_confirmation: '',
+            },
             error: '',
+            passwordError: '',
+            passwordSuccess: '',
+            passwordSaving: false,
             ready: false,
         };
     },
@@ -37,6 +45,37 @@ export default {
                 window.Telescope.recording = this.recording;
                 this.$root.recording = this.recording;
             });
+        },
+
+        changePassword() {
+            this.passwordError = '';
+            this.passwordSuccess = '';
+            this.passwordSaving = true;
+
+            axios
+                .post(Telescope.basePath + '/telescope-api/password', this.passwordForm)
+                .then(() => {
+                    this.passwordForm = {
+                        current_password: '',
+                        password: '',
+                        password_confirmation: '',
+                    };
+                    this.passwordSuccess = 'Password updated.';
+                })
+                .catch((error) => {
+                    const errors = error.response && error.response.data && error.response.data.errors;
+                    const firstError = errors
+                        ? Object.values(errors).flat()[0]
+                        : null;
+
+                    this.passwordError =
+                        firstError ||
+                        (error.response && error.response.data && error.response.data.message) ||
+                        'Unable to update the password.';
+                })
+                .finally(() => {
+                    this.passwordSaving = false;
+                });
         },
 
         createAccount() {
@@ -78,6 +117,59 @@ export default {
 <template>
     <div>
         <h1 class="nw-page-title mb-4">Settings</h1>
+
+        <div class="card mb-4">
+            <div class="card-header"><h2 class="h6 m-0">Change password</h2></div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Update the password for the signed-in Telescope account.
+                </p>
+                <div v-if="passwordError" class="text-danger small mb-3">{{ passwordError }}</div>
+                <div v-if="passwordSuccess" class="text-success small mb-3">{{ passwordSuccess }}</div>
+                <form class="form-row align-items-end" v-on:submit.prevent="changePassword">
+                    <div class="col-md-3">
+                        <label class="small text-muted" for="settings-current-password">Current password</label>
+                        <input
+                            id="settings-current-password"
+                            v-model="passwordForm.current_password"
+                            type="password"
+                            class="form-control"
+                            autocomplete="current-password"
+                            required
+                        />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small text-muted" for="settings-new-password">New password</label>
+                        <input
+                            id="settings-new-password"
+                            v-model="passwordForm.password"
+                            type="password"
+                            class="form-control"
+                            minlength="8"
+                            autocomplete="new-password"
+                            required
+                        />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small text-muted" for="settings-confirm-password">Confirm password</label>
+                        <input
+                            id="settings-confirm-password"
+                            v-model="passwordForm.password_confirmation"
+                            type="password"
+                            class="form-control"
+                            minlength="8"
+                            autocomplete="new-password"
+                            required
+                        />
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-muted btn-block" :disabled="passwordSaving">
+                            {{ passwordSaving ? 'Saving...' : 'Update password' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <div class="card mb-4">
             <div class="card-header"><h2 class="h6 m-0">Dashboard users</h2></div>

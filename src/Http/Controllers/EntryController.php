@@ -4,6 +4,7 @@ namespace Laravel\Telescope\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Laravel\Telescope\BatchTimeline;
 use Laravel\Telescope\Contracts\EntriesRepository;
 use Laravel\Telescope\Storage\EntryQueryOptions;
 
@@ -51,10 +52,12 @@ abstract class EntryController extends Controller
     public function show(EntriesRepository $storage, $id)
     {
         $entry = $storage->find($id)->generateAvatar();
+        $batch = $storage->get(null, EntryQueryOptions::forBatchId($entry->batchId)->limit(-1));
 
         return response()->json([
             'entry' => $entry,
-            'batch' => $storage->get(null, EntryQueryOptions::forBatchId($entry->batchId)->limit(-1)),
+            'batch' => $batch,
+            'timeline' => BatchTimeline::from($batch),
         ]);
     }
 

@@ -53,6 +53,24 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function journey(Request $request): JsonResponse
+    {
+        $email = is_string($request->query('email')) ? trim($request->query('email')) : '';
+        $ip = is_string($request->query('ip')) ? trim($request->query('ip')) : '';
+
+        if ($email === '' && $ip === '') {
+            return response()->json([
+                'message' => 'Provide an email or ip query parameter.',
+            ], 422);
+        }
+
+        return response()->json($this->aggregator->journey(
+            $email !== '' ? $email : null,
+            $ip !== '' ? $ip : null,
+            $this->hours($request),
+        ));
+    }
+
     private function hours(Request $request): int
     {
         $hours = (int) $request->input('hours', 24);

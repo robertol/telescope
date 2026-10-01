@@ -28,6 +28,20 @@ class EntryQueryOptions
     public $endpoint;
 
     /**
+     * The client IP address that retrieved request entries must match.
+     *
+     * @var string|null
+     */
+    public $ip;
+
+    /**
+     * The authenticated user email that retrieved request entries must match.
+     *
+     * @var string|null
+     */
+    public $email;
+
+    /**
      * The family hash that must belong to retrieved entries.
      *
      * @var string
@@ -76,6 +90,8 @@ class EntryQueryOptions
                 ->beforeSequence($request->before)
                 ->tag($request->tag)
                 ->endpoint($request->endpoint)
+                ->ip($request->query('ip'))
+                ->email($request->query('email'))
                 ->familyHash($request->family_hash)
                 ->minDuration($request->integer('min_duration') ?: null)
                 ->limit($request->take ?? 50);
@@ -153,6 +169,36 @@ class EntryQueryOptions
     public function endpoint(?string $endpoint)
     {
         $this->endpoint = $endpoint;
+
+        return $this;
+    }
+
+    /**
+     * Set the client IP address filter for request entries.
+     *
+     * @param  string|null  $ip
+     * @return $this
+     */
+    public function ip(?string $ip)
+    {
+        $ip = is_string($ip) ? trim($ip) : null;
+
+        $this->ip = $ip !== '' ? $ip : null;
+
+        return $this;
+    }
+
+    /**
+     * Set the authenticated user email filter for request entries.
+     *
+     * @param  string|null  $email
+     * @return $this
+     */
+    public function email(?string $email)
+    {
+        $email = is_string($email) ? trim($email) : null;
+
+        $this->email = $email !== '' ? $email : null;
 
         return $this;
     }

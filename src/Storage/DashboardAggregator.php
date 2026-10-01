@@ -86,6 +86,81 @@ class DashboardAggregator
     }
 
     /**
+     * Aggregate request endpoints for an authenticated email and/or client IP.
+     *
+     * @return array{requests: int, endpoints: array<int, array<string, mixed>>, email: ?string, ip: ?string}
+     */
+    public function journey(?string $email, ?string $ip, int $hours): array
+    {
+        $since = now()->subHours($hours);
+
+        $query = $this->table('telescope_entries')
+            ->where('type', EntryType::REQUEST)
+            ->where('created_at', '>=', $since);
+
+        if ($email) {
+            $like = '%'.$email.'%';
+
+            if ($this->isPgsql()) {
+                $query->whereRaw("(content::jsonb)->'user'->>'email' ILIKE ?", [$like]);
+            } else {
+                $query->whereRaw(
+                    "lower(coalesce(json_extract(content, '$.user.email'), '')) like ?",
+                    [strtolower($like)]
+                );
+            }
+        }
+
+        if ($ip) {
+            if ($this->isPgsql()) {
+                $query->whereRaw("(content::jsonb)->>'ip_address' = ?", [$ip]);
+            } else {
+                $query->where("content->ip_address", $ip);
+            }
+        }
+
+        $rows = $query->orderByDesc('created_at')->get(['content', 'created_at']);
+
+        $grouped = [];
+
+        foreach ($rows as $row) {
+            $content = is_string($row->content) ? json_decode($row->content, true) : (array) ($row->content ?? []);
+            $method = strtoupper((string) ($content['method'] ?? 'GET'));
+            $uri = (string) ($content['uri'] ?? '/');
+            $key = $method.' '.$uri;
+
+            if (! isset($grouped[$key])) {
+                $grouped[$key] = [
+                    'method' => $method,
+                    'uri' => $uri,
+                    'count' => 0,
+                    'last_seen' => Carbon::parse($row->created_at)->toDateTimeString(),
+                ];
+            }
+
+            $grouped[$key]['count']++;
+        }
+
+        $endpoints = collect($grouped)
+            ->sort(function (array $left, array $right) {
+                if ($left['count'] === $right['count']) {
+                    return strcmp($right['last_seen'], $left['last_seen']);
+                }
+
+                return $right['count'] <=> $left['count'];
+            })
+            ->values()
+            ->all();
+
+        return [
+            'requests' => $rows->count(),
+            'endpoints' => $endpoints,
+            'email' => $email,
+            'ip' => $ip,
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function exceptionSummary(int $hours, ?string $status = null): array

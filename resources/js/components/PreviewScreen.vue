@@ -96,6 +96,7 @@ export default {
 
                 this.$parent.entry = response.data.entry;
                 this.$parent.batch = response.data.batch;
+                this.$parent.timeline = response.data.timeline || [];
                 this.$parent.impact = response.data.impact || null;
 
                 this.ready = true;

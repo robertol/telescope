@@ -15,6 +15,7 @@ Route::delete('/telescope-api/accounts/{id}', 'AccountController@destroy');
 Route::get('/telescope-api/dashboard', 'DashboardController@index');
 Route::get('/telescope-api/settings', 'DashboardController@settings');
 Route::get('/telescope-api/users', 'DashboardController@users');
+Route::get('/telescope-api/journey', 'DashboardController@journey');
 
 Route::get('/telescope-api/exceptions/summary', 'ExceptionSummaryController@index');
 Route::get('/telescope-api/summaries/{type}', 'ResourceSummaryController@show');

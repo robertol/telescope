@@ -15,6 +15,7 @@ export default {
         return {
             entry: null,
             batch: [],
+            timeline: [],
             currentRequestTab: 'payload',
             currentResponseTab: 'response'
         };
@@ -151,7 +152,7 @@ export default {
                 </div>
             </div>
 
-            <related-entries :entry="entry" :batch="batch"> </related-entries>
+            <related-entries :entry="entry" :batch="batch" :timeline="timeline"> </related-entries>
         </div>
     </preview-screen>
 </template>

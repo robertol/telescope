@@ -2,6 +2,7 @@
 
 namespace Laravel\Telescope\Http\Controllers;
 
+use Laravel\Telescope\BatchTimeline;
 use Laravel\Telescope\Contracts\EntriesRepository;
 use Laravel\Telescope\EntryType;
 use Laravel\Telescope\Storage\EntryQueryOptions;
@@ -29,12 +30,14 @@ class QueueController extends EntryController
     public function show(EntriesRepository $storage, $id)
     {
         $entry = $storage->find($id);
+        $batch = isset($entry->content['updated_batch_id'])
+            ? $storage->get(null, EntryQueryOptions::forBatchId($entry->content['updated_batch_id'])->limit(-1))
+            : collect();
 
         return response()->json([
             'entry' => $entry,
-            'batch' => isset($entry->content['updated_batch_id'])
-                ? $storage->get(null, EntryQueryOptions::forBatchId($entry->content['updated_batch_id'])->limit(-1))
-                : null,
+            'batch' => $batch,
+            'timeline' => BatchTimeline::from($batch),
         ]);
     }
 

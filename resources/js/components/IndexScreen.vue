@@ -14,6 +14,8 @@ export default {
         return {
             tag: '',
             endpoint: '',
+            ip: '',
+            email: '',
             familyHash: '',
             minDuration: '',
             entries: [],
@@ -53,16 +55,7 @@ export default {
             this.collapsed = localStorage[this.rememberClosedKey] === '1';
         }
 
-        this.familyHash = this.$route.query.family_hash || '';
-
-        this.tag = this.$route.query.tag || '';
-
-        this.endpoint =
-            this.endpointOverride !== undefined && this.endpointOverride !== null
-                ? this.endpointOverride
-                : this.$route.query.endpoint || '';
-
-        this.minDuration = this.$route.query.min_duration || '';
+        this.syncFiltersFromRoute();
 
         this.loadEntries((entries) => {
             this.entries = entries;
@@ -104,16 +97,7 @@ export default {
             this.loadingNewEntries = false;
             this.resetPagination();
 
-            this.familyHash = this.$route.query.family_hash || '';
-
-            this.tag = this.$route.query.tag || '';
-
-            this.endpoint =
-                this.endpointOverride !== undefined && this.endpointOverride !== null
-                    ? this.endpointOverride
-                    : this.$route.query.endpoint || '';
-
-            this.minDuration = this.$route.query.min_duration || '';
+            this.syncFiltersFromRoute();
 
             this.ready = false;
 
@@ -130,16 +114,49 @@ export default {
 
 
     methods: {
+        syncFiltersFromRoute(){
+            this.familyHash = this.$route.query.family_hash || '';
+            this.tag = this.$route.query.tag || '';
+            this.ip = this.$route.query.ip || '';
+            this.email = this.$route.query.email || '';
+            this.minDuration = this.$route.query.min_duration || '';
+
+            this.endpoint =
+                this.endpointOverride !== undefined && this.endpointOverride !== null
+                    ? this.endpointOverride
+                    : this.$route.query.endpoint || '';
+        },
+
+
+        entriesQuery(extra = {}){
+            return Object.assign({
+                tag: this.tag,
+                endpoint: this.endpoint,
+                ip: this.ip,
+                email: this.email,
+                min_duration: this.minDuration,
+                family_hash: this.familyHash,
+            }, extra);
+        },
+
+
+        entriesQueryString(extra = {}){
+            const query = this.entriesQuery(extra);
+
+            return Object.keys(query)
+                .map((key) => key + '=' + encodeURIComponent(query[key] || ''))
+                .join('&');
+        },
+
+
         loadEntries(after){
             const {signal} = this.requestController;
 
             return axios.post(Telescope.basePath + '/telescope-api/' + this.resource +
-                    '?tag=' + encodeURIComponent(this.tag) +
-                    '&endpoint=' + encodeURIComponent(this.endpoint) +
-                    '&min_duration=' + encodeURIComponent(this.minDuration) +
-                    '&before=' + this.pageBefore +
-                    '&take=' + this.entriesPerRequest +
-                    '&family_hash=' + encodeURIComponent(this.familyHash),
+                    '?' + this.entriesQueryString({
+                        before: this.pageBefore,
+                        take: this.entriesPerRequest,
+                    }),
                     null, {signal}
             ).then(response => {
                 if (signal.aborted) return;
@@ -184,11 +201,7 @@ export default {
 
             this.newEntriesTimeout = setTimeout(() => {
                 axios.post(Telescope.basePath + '/telescope-api/' + this.resource +
-                        '?tag=' + encodeURIComponent(this.tag) +
-                        '&endpoint=' + encodeURIComponent(this.endpoint) +
-                        '&min_duration=' + encodeURIComponent(this.minDuration) +
-                        '&take=1' +
-                        '&family_hash=' + encodeURIComponent(this.familyHash),
+                        '?' + this.entriesQueryString({ take: 1 }),
                         null, {signal}
                 ).then(response => {
                     if (!signal.aborted) {

@@ -107,7 +107,12 @@ export default {
                             v-for="user in filtered"
                             :key="user.id"
                             class="cursor-pointer"
-                            v-on:click="$router.push({ path: '/requests', query: { tag: 'Auth:' + user.id } })"
+                            v-on:click="$router.push({
+                                path: '/requests',
+                                query: user.email
+                                    ? { email: user.email, hours: periodHours }
+                                    : { tag: 'Auth:' + user.id, hours: periodHours },
+                            })"
                         >
                             <td class="table-fit">
                                 <span class="nw-avatar">{{ initials(user) }}</span>

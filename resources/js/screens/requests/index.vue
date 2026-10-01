@@ -1,4 +1,5 @@
 <script type="text/ecmascript-6">
+import axios from 'axios';
 import StylesMixin from './../../mixins/entriesStyles';
 import ResourceSparkline from '../../components/ResourceSparkline.vue';
 import RequestDetailsPanel from '../../components/RequestDetailsPanel.vue';
@@ -13,12 +14,131 @@ export default {
     data() {
         return {
             expandedId: null,
+            filters: {
+                ip: '',
+                email: '',
+                endpoint: '',
+            },
+            journey: null,
+            journeyReady: false,
+            journeyController: null,
         };
+    },
+
+    computed: {
+        hasActiveFilters() {
+            return Boolean(
+                this.filters.ip ||
+                this.filters.email ||
+                this.filters.endpoint ||
+                this.$route.query.min_duration
+            );
+        },
+
+        hasJourneyFilter() {
+            return Boolean(this.filters.ip || this.filters.email);
+        },
+    },
+
+    watch: {
+        '$route.query': {
+            immediate: true,
+            handler() {
+                this.filters = {
+                    ip: this.$route.query.ip || '',
+                    email: this.$route.query.email || '',
+                    endpoint: this.$route.query.endpoint || '',
+                };
+
+                this.loadJourney();
+            },
+        },
+    },
+
+    destroyed() {
+        if (this.journeyController) {
+            this.journeyController.abort();
+        }
     },
 
     methods: {
         toggleExpanded(id) {
             this.expandedId = this.expandedId === id ? null : id;
+        },
+
+        applyFilters() {
+            this.debouncer(() => {
+                const query = Object.assign({}, this.$route.query, {
+                    ip: this.filters.ip.trim() || undefined,
+                    email: this.filters.email.trim() || undefined,
+                    endpoint: this.filters.endpoint.trim() || undefined,
+                });
+
+                ['ip', 'email', 'endpoint'].forEach((key) => {
+                    if (!query[key]) {
+                        delete query[key];
+                    }
+                });
+
+                this.$router.push({ query }).catch(() => {});
+            });
+        },
+
+        clearFilters() {
+            const query = Object.assign({}, this.$route.query);
+
+            delete query.ip;
+            delete query.email;
+            delete query.endpoint;
+            delete query.min_duration;
+            delete query.tag;
+
+            this.filters = { ip: '', email: '', endpoint: '' };
+            this.journey = null;
+
+            this.$router.push({ query }).catch(() => {});
+        },
+
+        loadJourney() {
+            if (this.journeyController) {
+                this.journeyController.abort();
+            }
+
+            if (!this.hasJourneyFilter) {
+                this.journey = null;
+                this.journeyReady = true;
+                return;
+            }
+
+            this.journeyReady = false;
+            this.journeyController = new AbortController();
+
+            return axios
+                .get(Telescope.basePath + '/telescope-api/journey', {
+                    params: {
+                        ip: this.filters.ip || undefined,
+                        email: this.filters.email || undefined,
+                        hours: this.periodHours,
+                    },
+                    signal: this.journeyController.signal,
+                })
+                .then((response) => {
+                    this.journey = response.data;
+                    this.journeyReady = true;
+                })
+                .catch((error) => {
+                    if (error.code === 'ERR_CANCELED') {
+                        return;
+                    }
+
+                    this.journey = null;
+                    this.journeyReady = true;
+                });
+        },
+
+        filterEndpoint(endpoint) {
+            this.filters.endpoint = endpoint.method + ':' + endpoint.uri;
+            this.applyFilters();
         },
     },
 }
@@ -28,18 +148,113 @@ export default {
     <div>
         <resource-sparkline type="request" title="Requests"></resource-sparkline>
 
+        <div class="card mb-3">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <h2 class="h6 m-0">Search</h2>
+                <button
+                    v-if="hasActiveFilters"
+                    type="button"
+                    class="nw-shell-action border-0 bg-transparent p-0"
+                    v-on:click="clearFilters"
+                >
+                    Clear filters
+                </button>
+            </div>
+
+            <div class="px-3 pb-3">
+                <div class="row">
+                    <div class="col-md-4 mb-2 mb-md-0">
+                        <label class="small text-muted mb-1" for="request-filter-ip">IP</label>
+                        <input
+                            id="request-filter-ip"
+                            type="search"
+                            class="form-control"
+                            placeholder="203.0.113.10"
+                            v-model="filters.ip"
+                            @input="applyFilters"
+                        />
+                    </div>
+                    <div class="col-md-4 mb-2 mb-md-0">
+                        <label class="small text-muted mb-1" for="request-filter-email">Email</label>
+                        <input
+                            id="request-filter-email"
+                            type="search"
+                            class="form-control"
+                            placeholder="user@example.com"
+                            v-model="filters.email"
+                            @input="applyFilters"
+                        />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="small text-muted mb-1" for="request-filter-path">Path</label>
+                        <input
+                            id="request-filter-path"
+                            type="search"
+                            class="form-control"
+                            placeholder="/v1/cards/*"
+                            v-model="filters.endpoint"
+                            @input="applyFilters"
+                        />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="hasJourneyFilter" class="card mb-3">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <h2 class="h6 m-0">Journey</h2>
+                <span class="text-muted small" v-if="journeyReady && journey">
+                    {{ journey.requests }} requests · {{ journey.endpoints.length }} endpoints
+                </span>
+            </div>
+
+            <div v-if="!journeyReady" class="p-4 text-muted text-center">Loading journey...</div>
+            <div v-else-if="!journey || !journey.endpoints.length" class="p-4 text-muted text-center">
+                No endpoints for this filter in the selected period.
+            </div>
+            <div v-else class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Verb</th>
+                            <th>Path</th>
+                            <th class="text-right">Hits</th>
+                            <th>Last seen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="endpoint in journey.endpoints"
+                            :key="endpoint.method + ':' + endpoint.uri"
+                            class="cursor-pointer"
+                            v-on:click="filterEndpoint(endpoint)"
+                        >
+                            <td class="table-fit">
+                                <span class="badge" :class="'badge-' + requestMethodClass(endpoint.method)">
+                                    {{ endpoint.method }}
+                                </span>
+                            </td>
+                            <td :title="endpoint.uri">{{ truncate(endpoint.uri, 70) }}</td>
+                            <td class="table-fit text-right">{{ endpoint.count }}</td>
+                            <td class="table-fit text-muted">{{ timeAgo(endpoint.last_seen) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <div v-if="$route.query.min_duration" class="d-flex align-items-center mb-3">
             <span class="text-muted small mr-3">
                 Showing requests slower than {{ formatDuration($route.query.min_duration) }}
             </span>
-            <router-link :to="{ path: '/requests', query: { hours: periodHours } }" class="nw-shell-action">
+            <button type="button" class="nw-shell-action border-0 bg-transparent p-0" v-on:click="clearFilters">
                 Clear filter
-            </router-link>
+            </button>
         </div>
 
         <monitored-requests></monitored-requests>
 
-        <index-screen title="Requests" resource="requests" endpoint-override="" remember-closed-key="telescopeRequestsCardClosed" :row-clickable="true" v-on:row-click="toggleExpanded($event.id)">
+        <index-screen title="Requests" resource="requests" :hide-search="true" remember-closed-key="telescopeRequestsCardClosed" :row-clickable="true" v-on:row-click="toggleExpanded($event.id)">
         <tr slot="table-header">
             <th scope="col">Verb</th>
             <th scope="col">Path</th>

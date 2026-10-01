@@ -3,7 +3,7 @@ import _ from 'lodash';
 import StylesMixin from './../mixins/entriesStyles';
 
 export default {
-    props: ['entry', 'batch'],
+    props: ['entry', 'batch', 'timeline'],
 
 
     mixins: [
@@ -16,7 +16,7 @@ export default {
      */
     data(){
         return {
-            currentTab: 'exceptions'
+            currentTab: 'timeline'
         };
     },
 
@@ -32,6 +32,9 @@ export default {
     watch: {
         entry(){
             this.activateFirstTab();
+        },
+        timeline(){
+            this.activateFirstTab();
         }
     },
 
@@ -40,6 +43,8 @@ export default {
         activateFirstTab(){
             if (window.location.hash) {
                 this.currentTab = window.location.hash.substring(1);
+            } else if (this.timelineEntries.length) {
+                this.currentTab = 'timeline';
             } else if (this.exceptions.length) {
                 this.currentTab = 'exceptions'
             } else if (this.logs.length) {
@@ -69,6 +74,26 @@ export default {
             }
         },
 
+        resourceForType(type){
+            return {
+                request: 'request-preview',
+                exception: 'exception-preview',
+                log: 'log-preview',
+                query: 'query-preview',
+                model: 'model-preview',
+                job: 'job-preview',
+                mail: 'mail-preview',
+                notification: 'notification-preview',
+                event: 'event-preview',
+                cache: 'cache-preview',
+                gate: 'gate-preview',
+                redis: 'redis-preview',
+                view: 'view-preview',
+                client_request: 'client-request-preview',
+                command: 'command-preview',
+            }[type] || null;
+        },
+
         activateTab(tab){
             this.currentTab = tab;
             if(window.history.replaceState) {
@@ -80,13 +105,28 @@ export default {
 
     computed: {
         hasRelatedEntries(){
-            return !!_.reject(this.batch, entry => {
+            return this.timelineEntries.length > 0 || !!_.reject(this.batch, entry => {
                 return _.includes(['request', 'command'], entry.type);
             }).length;
         },
 
         entryTypesAvailable(){
             return _.uniqBy(this.batch, 'type').length;
+        },
+
+        timelineEntries() {
+            if (this.timeline && this.timeline.length) {
+                return this.timeline;
+            }
+
+            return _.sortBy(this.batch || [], 'sequence').map((entry) => ({
+                id: entry.id,
+                type: entry.type,
+                sequence: entry.sequence,
+                created_at: entry.created_at,
+                summary: entry.type,
+                duration: null,
+            }));
         },
 
         exceptions() {
@@ -150,6 +190,7 @@ export default {
 
         tabs(){
             return _.filter([
+                {title: "Timeline", type: "timeline", count: this.timelineEntries.length},
                 {title: "Exceptions", type: "exceptions", count: this.exceptions.length},
                 {title: "Logs", type: "logs", count: this.logs.length},
                 {title: "Views", type: "views", count: this.views.length},
@@ -219,6 +260,49 @@ export default {
             </li>
         </ul>
         <div>
+            <!-- Request timeline -->
+            <table class="table table-hover mb-0" v-show="currentTab == 'timeline' && timelineEntries.length">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Summary</th>
+                        <th class="text-right">Duration</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in timelineEntries" :key="'timeline-' + item.id">
+                        <td class="table-fit">
+                            <span class="badge badge-secondary">{{ item.type }}</span>
+                        </td>
+                        <td :title="item.summary">
+                            {{ truncate(item.summary, 110) }}
+                        </td>
+                        <td class="table-fit text-right text-muted">
+                            {{ item.duration || '—' }}
+                        </td>
+                        <td class="table-fit">
+                            <router-link
+                                v-if="resourceForType(item.type)"
+                                :to="{
+                                    name: resourceForType(item.type),
+                                    params: { id: item.id },
+                                }"
+                                class="control-action"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM6.75 9.25a.75.75 0 000 1.5h4.59l-2.1 1.95a.75.75 0 001.02 1.1l3.5-3.25a.75.75 0 000-1.1l-3.5-3.25a.75.75 0 10-1.02 1.1l2.1 1.95H6.75z"
+                                        clip-rule="evenodd"
+                                    />
+                                </svg>
+                            </router-link>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
             <!-- Related Exceptions -->
             <table class="table table-hover mb-0" v-show="currentTab == 'exceptions' && exceptions.length">
                 <thead>

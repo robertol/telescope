@@ -1,8 +1,17 @@
 # Release Notes
 
-## [Unreleased](https://github.com/laravel/telescope/compare/v5.23.0...5.x)
+## [Unreleased](https://github.com/robertol/telescope/compare/v6.0.9...6.x)
 
 * Telescope persists through a dedicated `telescope` database connection that clones mysql, mariadb, pgsql, sqlite, or sqlsrv. PostgreSQL uses schema `telescope` instead of `public`. Existing `public` tables are not moved; migrate creates the isolated schema and new tables there. Driver names such as `pgsql` are not valid `TELESCOPE_DB_CONNECTION` values — they remap to the dedicated `telescope` connection.
+
+## [v6.0.9](https://github.com/robertol/telescope/compare/v6.0.8...v6.0.9) - 2026-10-01
+
+* Settings includes a Change password form for the signed-in Telescope user.
+* Requests has a Search panel for IP, email, and path filters without requiring Telescope tags.
+* Filtering Requests by IP or email shows a Journey panel with endpoint hits for the selected period.
+* Request details expose a chronological Timeline of the batch (queries, cache, jobs, exceptions, and related events).
+* Users navigates to Requests with an email filter when available.
+* Users is listed under Activity in the sidebar.
 * Dashboard and exception charts default to the last 24 hours.
 * Dashboard users created by the default installer must change their password on first access before using Telescope.
 * The login screen no longer displays the default Telescope account email.

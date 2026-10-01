@@ -5,6 +5,7 @@ const ACTIVITY_KEY = 'telescopeActivityOpen';
 
 const ACTIVITY_ITEMS = [
     { to: '/requests', label: 'Requests' },
+    { to: '/users', label: 'Users' },
     { to: '/jobs', label: 'Jobs' },
     { to: '/commands', label: 'Commands' },
     { to: '/schedule', label: 'Scheduled Tasks' },
@@ -158,13 +159,6 @@ export default {
         </div>
 
         <div class="nw-nav-section">Monitoring</div>
-
-        <router-link to="/users" class="nw-nav-link" :class="{ active: isActive('/users') }">
-            <svg class="nw-nav-icon" viewBox="0 0 24 24">
-                <path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-            </svg>
-            <span>Users</span>
-        </router-link>
 
         <router-link to="/logs" class="nw-nav-link" :class="{ active: isActive('/logs') }">
             <svg class="nw-nav-icon" viewBox="0 0 24 24">
