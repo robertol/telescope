@@ -5,6 +5,7 @@ import Routes from './routes';
 import VueRouter from 'vue-router';
 import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
+import resolveVueJsonPretty from './resolveVueJsonPretty';
 import moment from 'moment-timezone';
 import popper from 'popper.js';
 import relatedEntries from './components/RelatedEntries.vue';
@@ -46,7 +47,7 @@ const router = new VueRouter({
     base: routerBasePath,
 });
 
-Vue.component('vue-json-pretty', VueJsonPretty);
+Vue.component('vue-json-pretty', resolveVueJsonPretty(VueJsonPretty));
 Vue.component('related-entries', relatedEntries);
 Vue.component('index-screen', indexScreen);
 Vue.component('monitored-requests', monitoredRequests);

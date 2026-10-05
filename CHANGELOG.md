@@ -1,8 +1,12 @@
 # Release Notes
 
-## [Unreleased](https://github.com/robertol/telescope/compare/v6.0.9...6.x)
+## [Unreleased](https://github.com/robertol/telescope/compare/v6.0.10...6.x)
 
 * Telescope persists through a dedicated `telescope` database connection that clones mysql, mariadb, pgsql, sqlite, or sqlsrv. PostgreSQL uses schema `telescope` instead of `public`. Existing `public` tables are not moved; migrate creates the isolated schema and new tables there. Driver names such as `pgsql` are not valid `TELESCOPE_DB_CONNECTION` values — they remap to the dedicated `telescope` connection.
+
+## [v6.0.10](https://github.com/robertol/telescope/compare/v6.0.9...v6.0.10) - 2026-10-05
+
+* Fix empty payload, response, and log context panels after the Vite 8 upgrade by unwrapping `vue-json-pretty`'s UMD/default export before registering the global component.
 
 ## [v6.0.9](https://github.com/robertol/telescope/compare/v6.0.8...v6.0.9) - 2026-10-01
 
