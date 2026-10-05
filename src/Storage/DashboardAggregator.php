@@ -66,12 +66,18 @@ class DashboardAggregator
                 'tags.tag',
                 DB::raw('max(entries.created_at) as last_seen'),
                 DB::raw('count(*) as requests'),
-                DB::raw('max(entries.uuid) as latest_uuid'),
             ]);
 
-        return $rows->map(function ($row) {
+        return $rows->map(function ($row) use ($since) {
             $id = substr((string) $row->tag, 5);
-            $entry = $this->table('telescope_entries')->where('uuid', $row->latest_uuid)->first();
+            $entry = $this->table('telescope_entries as entries')
+                ->join('telescope_entries_tags as tags', 'entries.uuid', '=', 'tags.entry_uuid')
+                ->where('tags.tag', $row->tag)
+                ->where('entries.type', EntryType::REQUEST)
+                ->where('entries.created_at', '>=', $since)
+                ->orderByDesc('entries.created_at')
+                ->orderByDesc('entries.sequence')
+                ->first(['entries.content']);
             $content = is_string($entry?->content) ? json_decode($entry->content, true) : (array) ($entry->content ?? []);
             $user = $content['user'] ?? [];
 
