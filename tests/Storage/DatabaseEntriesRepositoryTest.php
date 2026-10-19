@@ -133,4 +133,15 @@ class DatabaseEntriesRepositoryTest extends FeatureTestCase
         $this->assertTrue(Schema::connection('testbench')->hasTable('telescope_monitored_endpoints'));
         $this->assertSame(['POST:/api/webhooks/*'], $repository->monitoringEndpoints());
     }
+
+    public function test_terminate_does_not_reset_monitored_endpoints_table_ready_state()
+    {
+        $repository = new DatabaseEntriesRepository('testbench');
+        $property = new \ReflectionProperty(DatabaseEntriesRepository::class, 'monitoredEndpointsTableReady');
+
+        $property->setValue($repository, true);
+        $repository->terminate();
+
+        $this->assertTrue($property->getValue($repository));
+    }
 }

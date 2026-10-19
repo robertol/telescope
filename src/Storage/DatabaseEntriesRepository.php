@@ -625,7 +625,6 @@ class DatabaseEntriesRepository implements Contract, ClearableRepository, Prunab
     {
         $this->monitoredTags = null;
         $this->monitoredEndpoints = null;
-        $this->monitoredEndpointsTableReady = false;
     }
 
     /**
